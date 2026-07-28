@@ -1,0 +1,61 @@
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - gosimple
+    - depguard
+    - forbidigo
+    - gosec
+    - bodyclose
+    - misspell
+
+linters-settings:
+  forbidigo:
+    forbid:
+      - pattern: '\.AutoMigrate\('
+        msg: "GORM AutoMigrate is banned outside test/ — use goose migrations (internal/database/migrations)"
+    exclude-godoc-examples: true
+
+  depguard:
+    rules:
+      handler:
+        files:
+          - "**/internal/handler/**"
+        deny:
+          - pkg: "gorm.io/gorm"
+            desc: "handlers must not talk to the DB directly; go through a service"
+          - pkg: "**/internal/repository"
+            desc: "handlers must not call repositories directly; go through a service"
+
+      repository:
+        files:
+          - "**/internal/repository/**"
+        deny:
+          - pkg: "**/internal/dto"
+            desc: "repositories operate on entities, not DTOs"
+          - pkg: "github.com/gofiber/fiber/v2"
+            desc: "repositories must be transport-agnostic"
+
+      service:
+        files:
+          - "**/internal/service/**"
+        deny:
+          - pkg: "github.com/gofiber/fiber/v2"
+            desc: "services must be transport-agnostic; map to/from fiber only in handlers"
+
+issues:
+  exclude-dirs:
+    - test/integration
+    - docs
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+        - bodyclose
