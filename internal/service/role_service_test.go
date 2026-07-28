@@ -38,10 +38,11 @@ func TestRoleUpdateRejectsSystemRole(t *testing.T) {
 	svc, repo := newTestRoleService(t)
 	ctx := context.Background()
 	roleID := uuid.New()
+	businessID := uuid.New()
 
 	repo.EXPECT().FindByID(ctx, roleID).Return(&entity.Role{IDMixin: entity.IDMixin{ID: roleID}, IsSystem: true}, nil)
 
-	_, err := svc.Update(ctx, roleID, nil, nil, nil)
+	_, err := svc.Update(ctx, businessID, roleID, nil, nil, nil)
 	ae, ok := apperror.As(err)
 	if !ok || ae.Code != apperror.CodeForbidden {
 		t.Fatalf("expected CodeForbidden, got %v", err)
@@ -53,8 +54,13 @@ func TestRoleUpdateAppliesPartialChangesAndSetsPermissions(t *testing.T) {
 	ctx := context.Background()
 	roleID := uuid.New()
 	permID := uuid.New()
+	businessID := uuid.New()
 
-	repo.EXPECT().FindByID(ctx, roleID).Return(&entity.Role{IDMixin: entity.IDMixin{ID: roleID}, Level: 10}, nil)
+	repo.EXPECT().FindByID(ctx, roleID).Return(&entity.Role{
+		IDMixin:    entity.IDMixin{ID: roleID},
+		BusinessID: &businessID,
+		Level:      10,
+	}, nil)
 	repo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, r *entity.Role) error {
 		if r.Level != 20 {
 			t.Errorf("Level = %d, want 20", r.Level)
@@ -64,7 +70,7 @@ func TestRoleUpdateAppliesPartialChangesAndSetsPermissions(t *testing.T) {
 	repo.EXPECT().SetPermissions(ctx, roleID, []uuid.UUID{permID}).Return(nil)
 
 	newLevel := 20
-	_, err := svc.Update(ctx, roleID, nil, &newLevel, []uuid.UUID{permID})
+	_, err := svc.Update(ctx, businessID, roleID, nil, &newLevel, []uuid.UUID{permID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,10 +80,30 @@ func TestRoleGetMapsNotFound(t *testing.T) {
 	svc, repo := newTestRoleService(t)
 	ctx := context.Background()
 	roleID := uuid.New()
+	businessID := uuid.New()
 
 	repo.EXPECT().FindByID(ctx, roleID).Return(nil, repository.ErrNotFound)
 
-	_, err := svc.Get(ctx, roleID)
+	_, err := svc.Get(ctx, businessID, roleID)
+	ae, ok := apperror.As(err)
+	if !ok || ae.Code != apperror.CodeNotFound {
+		t.Fatalf("expected CodeNotFound, got %v", err)
+	}
+}
+
+func TestRoleGetHidesCrossTenantRole(t *testing.T) {
+	svc, repo := newTestRoleService(t)
+	ctx := context.Background()
+	businessID := uuid.New()
+	otherBusinessID := uuid.New()
+	roleID := uuid.New()
+
+	repo.EXPECT().FindByID(ctx, roleID).Return(&entity.Role{
+		IDMixin:    entity.IDMixin{ID: roleID},
+		BusinessID: &otherBusinessID,
+	}, nil)
+
+	_, err := svc.Get(ctx, businessID, roleID)
 	ae, ok := apperror.As(err)
 	if !ok || ae.Code != apperror.CodeNotFound {
 		t.Fatalf("expected CodeNotFound, got %v", err)

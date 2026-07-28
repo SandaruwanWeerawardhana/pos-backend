@@ -23,14 +23,22 @@ type UserService interface {
 
 type userService struct {
 	users      repository.UserRepository
+	roles      repository.RoleRepository
 	bcryptCost int
 }
 
-func NewUserService(users repository.UserRepository, bcryptCost int) UserService {
-	return &userService{users: users, bcryptCost: bcryptCost}
+func NewUserService(users repository.UserRepository, bcryptCost int, roles ...repository.RoleRepository) UserService {
+	var roleRepo repository.RoleRepository
+	if len(roles) > 0 {
+		roleRepo = roles[0]
+	}
+	return &userService{users: users, roles: roleRepo, bcryptCost: bcryptCost}
 }
 
 func (s *userService) Create(ctx context.Context, businessID uuid.UUID, email, fullName, password string, roleIDs []uuid.UUID) (*entity.User, error) {
+	if err := s.validateRoleIDs(ctx, businessID, roleIDs); err != nil {
+		return nil, err
+	}
 	if _, err := s.users.FindByEmail(ctx, businessID, email); err == nil {
 		return nil, apperror.New(apperror.CodeEmailAlreadyExists, "a user with this email already exists")
 	} else if !errors.Is(err, repository.ErrNotFound) {
@@ -82,6 +90,11 @@ func (s *userService) List(ctx context.Context, businessID uuid.UUID, offset, li
 }
 
 func (s *userService) Update(ctx context.Context, businessID, id uuid.UUID, fullName, status *string, roleIDs []uuid.UUID) (*entity.User, error) {
+	if roleIDs != nil {
+		if err := s.validateRoleIDs(ctx, businessID, roleIDs); err != nil {
+			return nil, err
+		}
+	}
 	u, err := s.users.FindByID(ctx, businessID, id)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
@@ -107,6 +120,25 @@ func (s *userService) Update(ctx context.Context, businessID, id uuid.UUID, full
 	}
 
 	return u, nil
+}
+
+func (s *userService) validateRoleIDs(ctx context.Context, businessID uuid.UUID, roleIDs []uuid.UUID) error {
+	if s.roles == nil {
+		return nil
+	}
+	for _, roleID := range roleIDs {
+		role, err := s.roles.FindByID(ctx, roleID)
+		if err != nil {
+			if errors.Is(err, repository.ErrNotFound) {
+				return apperror.New(apperror.CodeNotFound, "role not found")
+			}
+			return apperror.Wrap(apperror.CodeDatabase, "failed to validate role", err)
+		}
+		if role.BusinessID != nil && *role.BusinessID != businessID {
+			return apperror.New(apperror.CodeNotFound, "role not found")
+		}
+	}
+	return nil
 }
 
 func (s *userService) Delete(ctx context.Context, businessID, id uuid.UUID) error {

@@ -1,13 +1,19 @@
 package routes
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/gofiber/fiber/v2"
 
-func Setup(app *fiber.App) {
+	"github.com/SandaruwanWeerawardhana/pos-backend/internal/handler"
+)
 
-	app.Get("/health", func(c *fiber.Ctx) error {
+type Handlers struct {
+	Auth *handler.AuthHandler
+	User *handler.UserHandler
+	Role *handler.RoleHandler
+}
 
-		return c.JSON(fiber.Map{
-			"status": "OK",
-		})
-	})
+func Register(app *fiber.App, handlers Handlers, auth, authRateLimit fiber.Handler) {
+	registerAuth(app, handlers.Auth, auth, authRateLimit)
+	registerUsers(app, handlers.User, auth)
+	registerRoles(app, handlers.Role, auth)
 }

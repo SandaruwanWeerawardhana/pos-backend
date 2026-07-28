@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/google/uuid"
 
 	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/ctxkey"
 )
@@ -20,15 +20,13 @@ const (
 // pkg/logger.FromContext and every downstream service call see the same id
 // a plain *fiber.Ctx can't be threaded into.
 func RequestID() fiber.Handler {
-	base := requestid.New(requestid.Config{
-		Header:     HeaderRequestID,
-		ContextKey: requestIDLocalsKey,
-	})
 	return func(c *fiber.Ctx) error {
-		if err := base(c); err != nil {
-			return err
+		id := c.Get(HeaderRequestID)
+		if id == "" {
+			id = uuid.NewString()
 		}
-		id := RequestIDFromFiber(c)
+		c.Locals(requestIDLocalsKey, id)
+		c.Set(HeaderRequestID, id)
 		c.SetUserContext(context.WithValue(c.UserContext(), ctxkey.RequestID, id))
 		return c.Next()
 	}

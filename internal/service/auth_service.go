@@ -61,6 +61,7 @@ type AuthService interface {
 	Logout(ctx context.Context, accessJTI string, accessExpiresAt time.Time, rawRefreshToken string, meta RequestMeta) error
 	LogoutAll(ctx context.Context, userID uuid.UUID, accessJTI string, accessExpiresAt time.Time, meta RequestMeta) error
 	Me(ctx context.Context, businessID, userID uuid.UUID) (AuthResult, error)
+	UpdateMe(ctx context.Context, businessID, userID uuid.UUID, fullName, phone *string) (AuthResult, error)
 	ChangePassword(ctx context.Context, businessID, userID uuid.UUID, currentPassword, newPassword string, meta RequestMeta) error
 }
 
@@ -366,6 +367,39 @@ func (s *authService) Me(ctx context.Context, businessID, userID uuid.UUID) (Aut
 		return AuthResult{}, err
 	}
 
+	return AuthResult{
+		User:        *user,
+		Business:    business,
+		BranchID:    branch.ID,
+		Roles:       roleNames,
+		Permissions: permNames,
+	}, nil
+}
+
+func (s *authService) UpdateMe(ctx context.Context, businessID, userID uuid.UUID, fullName, phone *string) (AuthResult, error) {
+	user, err := s.deps.Users.FindByID(ctx, businessID, userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return AuthResult{}, apperror.New(apperror.CodeNotFound, "user not found")
+		}
+		return AuthResult{}, apperror.Wrap(apperror.CodeDatabase, "failed to load user", err)
+	}
+
+	if fullName != nil {
+		user.FullName = strings.TrimSpace(*fullName)
+	}
+	if phone != nil {
+		trimmed := strings.TrimSpace(*phone)
+		user.Phone = &trimmed
+	}
+	if err := s.deps.Users.Update(ctx, user); err != nil {
+		return AuthResult{}, apperror.Wrap(apperror.CodeDatabase, "failed to update profile", err)
+	}
+
+	business, branch, _, roleNames, permNames, err := s.loadContext(ctx, *user)
+	if err != nil {
+		return AuthResult{}, err
+	}
 	return AuthResult{
 		User:        *user,
 		Business:    business,

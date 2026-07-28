@@ -92,6 +92,48 @@ func newTestAuthService(t *testing.T) (service.AuthService, authServiceMocks) {
 	return service.NewAuthService(deps, defaultTestConfig()), m
 }
 
+func TestUpdateMePersistsProfileAndReturnsAuthContext(t *testing.T) {
+	svc, m := newTestAuthService(t)
+	ctx := context.Background()
+	businessID := uuid.New()
+	userID := uuid.New()
+	branchID := uuid.New()
+	roleID := uuid.New()
+	user := &entity.User{
+		IDMixin:    entity.IDMixin{ID: userID},
+		BusinessID: businessID,
+		FullName:   "Old Name",
+	}
+	business := &entity.Business{IDMixin: entity.IDMixin{ID: businessID}, Name: "Acme"}
+	branch := &entity.Branch{IDMixin: entity.IDMixin{ID: branchID}, BusinessID: businessID}
+
+	m.users.EXPECT().FindByID(ctx, businessID, userID).Return(user, nil)
+	m.users.EXPECT().Update(ctx, user).DoAndReturn(func(_ context.Context, updated *entity.User) error {
+		if updated.FullName != "New Name" {
+			t.Errorf("FullName = %q, want New Name", updated.FullName)
+		}
+		if updated.Phone == nil || *updated.Phone != "+94771234567" {
+			t.Errorf("Phone = %v, want +94771234567", updated.Phone)
+		}
+		return nil
+	})
+	m.businesses.EXPECT().FindByID(ctx, businessID).Return(business, nil)
+	m.branches.EXPECT().FindDefault(ctx, businessID).Return(branch, nil)
+	m.users.EXPECT().ListRoleIDs(ctx, userID).Return([]uuid.UUID{roleID}, nil)
+	m.users.EXPECT().ListRoleNames(ctx, userID).Return([]string{"owner"}, nil)
+	m.roles.EXPECT().ListPermissionNamesForRoles(ctx, []uuid.UUID{roleID}).Return([]string{"users.read"}, nil)
+
+	name := " New Name "
+	phone := " +94771234567 "
+	result, err := svc.UpdateMe(ctx, businessID, userID, &name, &phone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.BranchID != branchID || len(result.Roles) != 1 {
+		t.Fatalf("unexpected auth context: %+v", result)
+	}
+}
+
 func TestRegisterDisabledReturnsForbidden(t *testing.T) {
 	deps, _ := newTestAuthDeps(t)
 	cfg := defaultTestConfig()

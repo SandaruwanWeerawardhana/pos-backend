@@ -19,12 +19,9 @@ func NewTxManager(db *gorm.DB) *TxManager {
 	return &TxManager{db: db}
 }
 
-// TxFn receives the *gorm.DB bound to the transaction.
-type TxFn func(ctx context.Context, tx *gorm.DB) error
-
 // WithTransaction runs fn inside a transaction, committing if fn returns
 // nil and rolling back otherwise (including on panic, per gorm.Transaction).
-func (m *TxManager) WithTransaction(ctx context.Context, fn TxFn) error {
+func (m *TxManager) WithTransaction(ctx context.Context, fn func(context.Context, *gorm.DB) error) error {
 	return m.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return fn(ctx, tx)
 	})

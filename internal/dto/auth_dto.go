@@ -36,6 +36,7 @@ type AuthUserResponse struct {
 	ID           string   `json:"id"`
 	Email        string   `json:"email"`
 	Name         string   `json:"name"`
+	Phone        *string  `json:"phone,omitempty"`
 	BusinessID   string   `json:"business_id"`
 	BusinessName string   `json:"business_name"`
 	BusinessType string   `json:"business_type"`

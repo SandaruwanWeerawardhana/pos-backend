@@ -3,7 +3,7 @@ package config
 import "time"
 
 type JWTConfig struct {
-	Algorithm string `env:"JWT_ALGORITHM" envDefault:"HS256" validate:"required,oneof=HS256 HS384 HS512"`
+	Algorithm string `env:"JWT_ALGORITHM" envDefault:"HS256" validate:"required,oneof=HS256"`
 
 	// No envDefault on either secret. A defaulted signing key is the single most
 	// common way a Go service ships forgeable tokens, so a missing value must

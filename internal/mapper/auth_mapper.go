@@ -16,6 +16,7 @@ func ToAuthUserResponse(u entity.User, business entity.Business, branchID string
 		ID:           u.ID.String(),
 		Email:        u.Email,
 		Name:         u.FullName,
+		Phone:        u.Phone,
 		BusinessID:   business.ID.String(),
 		BusinessName: business.Name,
 		BusinessType: business.BusinessType,

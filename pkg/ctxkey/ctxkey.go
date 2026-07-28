@@ -11,4 +11,6 @@ const (
 	BusinessID Key = "business_id"
 	BranchID   Key = "branch_id"
 	Roles      Key = "roles"
+	AccessJTI  Key = "access_jti"
+	AccessExp  Key = "access_exp"
 )

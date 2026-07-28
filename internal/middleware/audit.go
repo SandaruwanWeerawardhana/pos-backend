@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"log/slog"
+	"sync"
 
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/service"
 )
@@ -17,10 +18,17 @@ type AuditWorker struct {
 	svc    service.AuditService
 	queue  chan service.AuditEntry
 	logger *slog.Logger
+	once   sync.Once
+	done   chan struct{}
 }
 
 func NewAuditWorker(svc service.AuditService, bufferSize int, logger *slog.Logger) *AuditWorker {
-	w := &AuditWorker{svc: svc, queue: make(chan service.AuditEntry, bufferSize), logger: logger}
+	w := &AuditWorker{
+		svc:    svc,
+		queue:  make(chan service.AuditEntry, bufferSize),
+		logger: logger,
+		done:   make(chan struct{}),
+	}
 	go w.run()
 	return w
 }
@@ -38,6 +46,7 @@ func (w *AuditWorker) Log(_ context.Context, entry service.AuditEntry) error {
 }
 
 func (w *AuditWorker) run() {
+	defer close(w.done)
 	for entry := range w.queue {
 		if err := w.svc.Log(context.Background(), entry); err != nil {
 			w.logger.Error("failed to persist audit log", "action", entry.Action, "error", err.Error())
@@ -49,5 +58,8 @@ func (w *AuditWorker) run() {
 // after the HTTP server has stopped accepting requests, so in-flight
 // entries still get a chance to drain.
 func (w *AuditWorker) Close() {
-	close(w.queue)
+	w.once.Do(func() {
+		close(w.queue)
+		<-w.done
+	})
 }

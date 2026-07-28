@@ -59,6 +59,28 @@ func TestUserCreateHashesPasswordAndAssignsRoles(t *testing.T) {
 	}
 }
 
+func TestUserCreateRejectsCrossTenantRole(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	users := mocks.NewMockUserRepository(ctrl)
+	roles := mocks.NewMockRoleRepository(ctrl)
+	svc := NewUserService(users, 4, roles)
+	ctx := context.Background()
+	businessID := uuid.New()
+	otherBusinessID := uuid.New()
+	roleID := uuid.New()
+
+	roles.EXPECT().FindByID(ctx, roleID).Return(&entity.Role{
+		IDMixin:    entity.IDMixin{ID: roleID},
+		BusinessID: &otherBusinessID,
+	}, nil)
+
+	_, err := svc.Create(ctx, businessID, "new@biz.test", "New User", "password123", []uuid.UUID{roleID})
+	ae, ok := apperror.As(err)
+	if !ok || ae.Code != apperror.CodeNotFound {
+		t.Fatalf("expected CodeNotFound, got %v", err)
+	}
+}
+
 func TestUserGetMapsNotFound(t *testing.T) {
 	svc, repo := newTestUserService(t)
 	ctx := context.Background()

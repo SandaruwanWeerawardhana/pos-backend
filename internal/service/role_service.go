@@ -13,9 +13,9 @@ import (
 
 type RoleService interface {
 	Create(ctx context.Context, businessID uuid.UUID, name, description string, level int, permissionIDs []uuid.UUID) (*entity.Role, error)
-	Get(ctx context.Context, id uuid.UUID) (*entity.Role, error)
+	Get(ctx context.Context, businessID, id uuid.UUID) (*entity.Role, error)
 	List(ctx context.Context, businessID uuid.UUID) ([]entity.Role, error)
-	Update(ctx context.Context, id uuid.UUID, description *string, level *int, permissionIDs []uuid.UUID) (*entity.Role, error)
+	Update(ctx context.Context, businessID, id uuid.UUID, description *string, level *int, permissionIDs []uuid.UUID) (*entity.Role, error)
 	Delete(ctx context.Context, businessID, id uuid.UUID) error
 	PermissionNames(ctx context.Context, roleID uuid.UUID) ([]string, error)
 	PermissionNamesForRoles(ctx context.Context, roleIDs []uuid.UUID) ([]string, error)
@@ -53,13 +53,16 @@ func (s *roleService) Create(ctx context.Context, businessID uuid.UUID, name, de
 	return &r, nil
 }
 
-func (s *roleService) Get(ctx context.Context, id uuid.UUID) (*entity.Role, error) {
+func (s *roleService) Get(ctx context.Context, businessID, id uuid.UUID) (*entity.Role, error) {
 	r, err := s.roles.FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return nil, apperror.New(apperror.CodeNotFound, "role not found")
 		}
 		return nil, apperror.Wrap(apperror.CodeDatabase, "failed to load role", err)
+	}
+	if r.BusinessID != nil && *r.BusinessID != businessID {
+		return nil, apperror.New(apperror.CodeNotFound, "role not found")
 	}
 	return r, nil
 }
@@ -72,7 +75,7 @@ func (s *roleService) List(ctx context.Context, businessID uuid.UUID) ([]entity.
 	return roles, nil
 }
 
-func (s *roleService) Update(ctx context.Context, id uuid.UUID, description *string, level *int, permissionIDs []uuid.UUID) (*entity.Role, error) {
+func (s *roleService) Update(ctx context.Context, businessID, id uuid.UUID, description *string, level *int, permissionIDs []uuid.UUID) (*entity.Role, error) {
 	r, err := s.roles.FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
@@ -82,6 +85,9 @@ func (s *roleService) Update(ctx context.Context, id uuid.UUID, description *str
 	}
 	if r.IsSystem {
 		return nil, apperror.New(apperror.CodeForbidden, "system roles cannot be modified")
+	}
+	if r.BusinessID == nil || *r.BusinessID != businessID {
+		return nil, apperror.New(apperror.CodeNotFound, "role not found")
 	}
 
 	if description != nil {
