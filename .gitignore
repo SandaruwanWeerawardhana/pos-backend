@@ -2,17 +2,23 @@
 bin/
 dist/
 build/
+tmp/
+out/
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
 *.test
+*.out
 
 # Go workspace and coverage artifacts
 vendor/
+.gocache/
 coverage.out
+coverage.html
 *.coverprofile
+*.prof
 
 # Environment files
 .env
@@ -21,6 +27,7 @@ coverage.out
 
 # Logs
 *.log
+logs/
 
 # Editor and OS files
 .idea/
@@ -29,3 +36,7 @@ coverage.out
 *.swo
 .DS_Store
 Thumbs.db
+
+# AI agent instructions
+CLAUDE.md
+AGENTS.md
