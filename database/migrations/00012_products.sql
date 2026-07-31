@@ -26,7 +26,6 @@ CREATE TABLE products (
     name                  TEXT NOT NULL,
     sku                   TEXT NOT NULL,
     barcode               TEXT NOT NULL,
-    -- 'package' = GTIN printed by the supplier, 'generated' = in-store code.
     barcode_source        TEXT NOT NULL DEFAULT 'package'
                               CHECK (barcode_source IN ('package', 'generated')),
 
@@ -57,23 +56,16 @@ CREATE TABLE products (
     allow_returns         BOOLEAN NOT NULL DEFAULT true,
     track_expiry          BOOLEAN NOT NULL DEFAULT false,
     track_batch           BOOLEAN NOT NULL DEFAULT false,
-
-    -- reorder_level triggers the low-stock alert; min_stock_level is the hard
-    -- floor. Distinct thresholds, deliberately separate columns.
     reorder_level         NUMERIC(14, 3) NULL,
     min_stock_level       NUMERIC(14, 3) NULL,
     discount_percent      NUMERIC(5, 2) NOT NULL DEFAULT 0
                               CHECK (discount_percent >= 0 AND discount_percent <= 100),
-
     product_code          TEXT NULL,
     qr_code               TEXT NULL,
     shelf_location        TEXT NULL,
     branch                TEXT NULL,
     supplier_product_code TEXT NULL,
     image_url             TEXT NULL,
-    -- images is an ordered list of data URLs; plugin_data is opaque key/value
-    -- owned by the active business-type plugin. Neither is ever queried by
-    -- content, so no relational split earns its keep.
     images                JSONB NOT NULL DEFAULT '[]',
     plugin_data           JSONB NOT NULL DEFAULT '{}',
 
@@ -85,17 +77,13 @@ CREATE TABLE products (
     deleted_at            TIMESTAMPTZ NULL
 );
 
--- SKU and barcode are unique per business, not globally: two tenants may
--- legitimately stock the same GTIN.
+
 CREATE UNIQUE INDEX products_business_id_sku_key
     ON products (business_id, sku) WHERE deleted_at IS NULL;
 CREATE UNIQUE INDEX products_business_id_barcode_key
     ON products (business_id, barcode) WHERE deleted_at IS NULL;
 CREATE INDEX products_business_id_idx ON products (business_id);
 CREATE INDEX products_business_id_category_idx ON products (business_id, category);
--- Supports the Phase 2 catalogue delta pull (updated_at > since): a full
--- catalogue every 30 seconds does not scale, and the index it needs is free
--- to add now.
 CREATE INDEX products_business_id_updated_at_idx ON products (business_id, updated_at DESC);
 
 CREATE TRIGGER products_set_updated_at

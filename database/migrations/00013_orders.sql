@@ -22,14 +22,7 @@ CREATE TABLE orders (
     business_id             UUID NOT NULL REFERENCES businesses (id) ON DELETE CASCADE,
     branch_id               UUID NULL REFERENCES branches (id) ON DELETE SET NULL,
     client_generated_id     TEXT NOT NULL,
-    -- Generated per-terminal by the till, so two terminals in one store can
-    -- mint the same number on the same day. Stored as sent (it is printed on
-    -- the customer's receipt) and NOT unique; server-assigned or
-    -- device-prefixed numbering is a Phase 2 decision.
     receipt_no              TEXT NULL,
-
-    -- Primary tender. Split payments are itemised in order_payments; this
-    -- mirrors the frontend's PendingOrder.payment_method for list/filter UI.
     payment_method          TEXT NOT NULL
                                 CHECK (payment_method IN ('cash', 'card', 'qr', 'other')),
 
@@ -42,10 +35,7 @@ CREATE TABLE orders (
     totals_mismatch         BOOLEAN NOT NULL DEFAULT false,
     server_total_cents      BIGINT NULL,
     server_tax_total_cents  BIGINT NULL,
-
     cashier_id              UUID NULL REFERENCES users (id) ON DELETE SET NULL,
-    -- sold_at comes off the client and is never defaulted to now(): an order
-    -- that syncs days late must keep the business date it was rung up on.
     sold_at                 TIMESTAMPTZ NOT NULL,
     synced_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -87,8 +77,7 @@ CREATE TABLE order_items (
 CREATE INDEX order_items_order_id_idx ON order_items (order_id);
 CREATE INDEX order_items_product_id_idx ON order_items (product_id);
 
--- One row per tender leg. A single-tender sale has exactly one; a split sale
--- has several whose amount_cents sum to the order total.
+
 CREATE TABLE order_payments (
     id              UUID PRIMARY KEY,
     order_id        UUID NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
