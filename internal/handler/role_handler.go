@@ -38,7 +38,7 @@ func (h *RoleHandler) Create(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return ok(c, fiber.StatusCreated, "role created", mapper.ToRoleResponse(*role, permissions))
+	return ok(c, fiber.StatusCreated, mapper.ToRoleResponse(*role, permissions))
 }
 
 func (h *RoleHandler) Get(c *fiber.Ctx) error {
@@ -54,7 +54,7 @@ func (h *RoleHandler) Get(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return ok(c, fiber.StatusOK, "role retrieved", mapper.ToRoleResponse(*role, permissions))
+	return ok(c, fiber.StatusOK, mapper.ToRoleResponse(*role, permissions))
 }
 
 func (h *RoleHandler) List(c *fiber.Ctx) error {
@@ -70,7 +70,7 @@ func (h *RoleHandler) List(c *fiber.Ctx) error {
 		}
 		permissionsByRoleID[role.ID.String()] = permissions
 	}
-	return ok(c, fiber.StatusOK, "roles retrieved", mapper.ToRoleResponseList(roles, permissionsByRoleID))
+	return ok(c, fiber.StatusOK, mapper.ToRoleResponseList(roles, permissionsByRoleID))
 }
 
 func (h *RoleHandler) Update(c *fiber.Ctx) error {
@@ -100,7 +100,7 @@ func (h *RoleHandler) Update(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return ok(c, fiber.StatusOK, "role updated", mapper.ToRoleResponse(*role, permissions))
+	return ok(c, fiber.StatusOK, mapper.ToRoleResponse(*role, permissions))
 }
 
 func (h *RoleHandler) Delete(c *fiber.Ctx) error {

@@ -19,7 +19,7 @@ func NewHealthHandler(db *sql.DB, redisClient *redis.Client) *HealthHandler {
 }
 
 func (h *HealthHandler) Live(c *fiber.Ctx) error {
-	return ok(c, fiber.StatusOK, "service healthy", fiber.Map{"status": "ok"})
+	return ok(c, fiber.StatusOK, fiber.Map{"status": "ok"})
 }
 
 func (h *HealthHandler) Ready(c *fiber.Ctx) error {
@@ -30,7 +30,7 @@ func (h *HealthHandler) Ready(c *fiber.Ctx) error {
 	if err := h.redis.Ping(ctx).Err(); err != nil {
 		return apperror.Wrap(apperror.CodeServiceUnavailable, "redis unavailable", err)
 	}
-	return ok(c, fiber.StatusOK, "service ready", fiber.Map{
+	return ok(c, fiber.StatusOK, fiber.Map{
 		"status":   "ready",
 		"database": "ok",
 		"redis":    "ok",

@@ -11,10 +11,14 @@ import (
 )
 
 // ErrorHandler is the single place that turns any error returned from a
-// handler or middleware into the API's error envelope. Anything that isn't
-// an *apperror.AppError becomes a generic 500 INTERNAL_ERROR — the real
+// handler or middleware into the API's error body, {"message": "..."}.
+// Anything that isn't an *apperror.AppError becomes a generic 500 — the real
 // error is logged server-side under the request id, never echoed to the
-// client.
+// client, since the client renders the message string raw to a cashier.
+//
+// The error's stable code and field detail stay in the log line only: they are
+// what makes a failure debuggable, and dropping them from the wire is a
+// deliberate consequence of the client reading nothing but `message`.
 func ErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 	return func(c *fiber.Ctx, err error) error {
 		requestID := RequestIDFromFiber(c)
@@ -30,9 +34,17 @@ func ErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 			ae = apperror.New(apperror.CodeInternal, "an unexpected error occurred")
 		} else if ae.Internal != nil {
 			logger.Error("request failed", "request_id", requestID, "code", string(ae.Code), "error", ae.Internal.Error(), "path", c.Path())
+		} else {
+			// No wrapped cause, so nothing above logged this. Record it anyway:
+			// the code and field detail are dropped from the response body, and
+			// this line is the only remaining trace of which rule rejected the
+			// request.
+			logger.Warn("request rejected", "request_id", requestID, "code", string(ae.Code), "message", ae.Message, "path", c.Path())
 		}
 
-		return c.Status(ae.HTTPStatus).JSON(response.FromAppError(requestID, ae))
+		// The request id travels in the X-Request-ID response header (see
+		// RequestID middleware), so dropping it from the body loses nothing.
+		return c.Status(ae.HTTPStatus).JSON(response.FromAppError(ae))
 	}
 }
 

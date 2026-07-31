@@ -37,7 +37,10 @@ type HTTPConfig struct {
 	WriteTimeout    time.Duration `env:"HTTP_WRITE_TIMEOUT" envDefault:"15s" validate:"required"`
 	IdleTimeout     time.Duration `env:"HTTP_IDLE_TIMEOUT" envDefault:"60s" validate:"required"`
 	ShutdownTimeout time.Duration `env:"HTTP_SHUTDOWN_TIMEOUT" envDefault:"15s" validate:"required"`
-	BodyLimit       int           `env:"HTTP_BODY_LIMIT" envDefault:"4194304" validate:"required,min=1024"`
+	// 2 MiB. Sized for the largest legitimate request, an order-sync batch of 50
+	// sales with their line items; product images travel as data URLs but only
+	// downward, since the client never pushes a product back in Phase 1.
+	BodyLimit int `env:"HTTP_BODY_LIMIT" envDefault:"2097152" validate:"required,min=1024"`
 
 	// TrustedProxies must be set before any X-Forwarded-For header is honoured.
 	// Left empty, the rate limiter keys on the direct peer address, which is the

@@ -61,7 +61,7 @@ type AuthService interface {
 	Logout(ctx context.Context, accessJTI string, accessExpiresAt time.Time, rawRefreshToken string, meta RequestMeta) error
 	LogoutAll(ctx context.Context, userID uuid.UUID, accessJTI string, accessExpiresAt time.Time, meta RequestMeta) error
 	Me(ctx context.Context, businessID, userID uuid.UUID) (AuthResult, error)
-	UpdateMe(ctx context.Context, businessID, userID uuid.UUID, fullName, phone *string) (AuthResult, error)
+	UpdateProfile(ctx context.Context, businessID, userID uuid.UUID, in UpdateProfileInput) (AuthResult, error)
 	ChangePassword(ctx context.Context, businessID, userID uuid.UUID, currentPassword, newPassword string, meta RequestMeta) error
 }
 
@@ -376,7 +376,20 @@ func (s *authService) Me(ctx context.Context, businessID, userID uuid.UUID) (Aut
 	}, nil
 }
 
-func (s *authService) UpdateMe(ctx context.Context, businessID, userID uuid.UUID, fullName, phone *string) (AuthResult, error) {
+// UpdateProfileInput is the set of profile fields a user may change about
+// themselves. Nil means "not supplied" — the client sends only what changed.
+//
+// Email is absent on purpose: repointing the address a user signs in with needs
+// an ownership-verification round-trip that does not exist yet, so the handler
+// accepts the field on the wire and drops it rather than silently rewriting a
+// login credential.
+type UpdateProfileInput struct {
+	Name         *string
+	Phone        *string
+	BusinessName *string
+}
+
+func (s *authService) UpdateProfile(ctx context.Context, businessID, userID uuid.UUID, in UpdateProfileInput) (AuthResult, error) {
 	user, err := s.deps.Users.FindByID(ctx, businessID, userID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
@@ -385,15 +398,30 @@ func (s *authService) UpdateMe(ctx context.Context, businessID, userID uuid.UUID
 		return AuthResult{}, apperror.Wrap(apperror.CodeDatabase, "failed to load user", err)
 	}
 
-	if fullName != nil {
-		user.FullName = strings.TrimSpace(*fullName)
+	if in.Name != nil {
+		user.FullName = strings.TrimSpace(*in.Name)
 	}
-	if phone != nil {
-		trimmed := strings.TrimSpace(*phone)
+	if in.Phone != nil {
+		trimmed := strings.TrimSpace(*in.Phone)
 		user.Phone = &trimmed
 	}
 	if err := s.deps.Users.Update(ctx, user); err != nil {
 		return AuthResult{}, apperror.Wrap(apperror.CodeDatabase, "failed to update profile", err)
+	}
+
+	// Renaming the business is a tenant-wide change reached through the profile
+	// screen, so it is applied here rather than in a separate endpoint. The slug
+	// is deliberately left alone: it keys the tenant and is referenced
+	// elsewhere, so a display-name edit must not repoint it.
+	if in.BusinessName != nil {
+		business, bizErr := s.deps.Businesses.FindByID(ctx, businessID)
+		if bizErr != nil {
+			return AuthResult{}, apperror.Wrap(apperror.CodeDatabase, "failed to load business", bizErr)
+		}
+		business.Name = strings.TrimSpace(*in.BusinessName)
+		if bizErr = s.deps.Businesses.Update(ctx, business); bizErr != nil {
+			return AuthResult{}, apperror.Wrap(apperror.CodeDatabase, "failed to update business name", bizErr)
+		}
 	}
 
 	business, branch, _, roleNames, permNames, err := s.loadContext(ctx, *user)

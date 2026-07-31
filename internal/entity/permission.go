@@ -16,8 +16,9 @@ type Permission struct {
 
 	Resource string `gorm:"column:resource;not null"`
 	Action   string `gorm:"column:action;not null"`
-	// Name is a DB-generated column (resource || ':' || action); read-only
-	// from Go, hence "->" instead of a writable tag.
+	// Name is a DB-generated column (resource || '.' || action); read-only
+	// from Go, hence "->" instead of a writable tag. The dot separator matches
+	// the frontend's PERMISSIONS list verbatim.
 	Name        string  `gorm:"column:name;->"`
 	Description *string `gorm:"column:description"`
 }

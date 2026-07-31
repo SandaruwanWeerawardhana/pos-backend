@@ -76,7 +76,11 @@ func NewContainer(ctx context.Context) (*Container, error) {
 	roles := repository.NewRoleRepository(db)
 	permissions := repository.NewPermissionRepository(db)
 	refreshTokens := repository.NewRefreshTokenRepository(db)
+	passwordResets := repository.NewPasswordResetRepository(db)
 	auditLogs := repository.NewAuditLogRepository(db)
+	products := repository.NewProductRepository(db)
+	orders := repository.NewOrderRepository(db)
+	stock := repository.NewStockRepository(db)
 	tx := repository.NewTxManager(db)
 
 	issuer := pkgjwt.NewIssuer(
@@ -106,6 +110,13 @@ func NewContainer(ctx context.Context) (*Container, error) {
 	userService := service.NewUserService(users, cfg.Bcrypt.Cost, roles)
 	roleService := service.NewRoleService(roles)
 	permissionService := service.NewPermissionService(permissions)
+	passwordResetService := service.NewPasswordResetService(
+		users, passwordResets, tokenService, cfg.Bcrypt.Cost,
+	)
+	productService := service.NewProductService(products)
+	orderSyncService := service.NewOrderSyncService(
+		orders, stock, tx, service.DefaultOrderTxRepos,
+	)
 
 	closeDB = false
 	return &Container{
@@ -117,9 +128,13 @@ func NewContainer(ctx context.Context) (*Container, error) {
 		Permissions: permissionService,
 		AuditWorker: auditWorker,
 		Handlers: routes.Handlers{
-			Auth: handler.NewAuthHandler(authService),
-			User: handler.NewUserHandler(userService),
-			Role: handler.NewRoleHandler(roleService),
+			// The reset token is echoed back in the response only in a local
+			// environment, where there is no mail server to deliver it.
+			Auth:    handler.NewAuthHandler(authService, passwordResetService, cfg.App.IsLocal()),
+			User:    handler.NewUserHandler(userService),
+			Role:    handler.NewRoleHandler(roleService),
+			Product: handler.NewProductHandler(productService),
+			Order:   handler.NewOrderHandler(orderSyncService),
 		},
 		Health: handler.NewHealthHandler(sqlDB, redisClient),
 	}, nil

@@ -125,7 +125,10 @@ func TestUpdateMePersistsProfileAndReturnsAuthContext(t *testing.T) {
 
 	name := " New Name "
 	phone := " +94771234567 "
-	result, err := svc.UpdateMe(ctx, businessID, userID, &name, &phone)
+	result, err := svc.UpdateProfile(ctx, businessID, userID, service.UpdateProfileInput{
+		Name:  &name,
+		Phone: &phone,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

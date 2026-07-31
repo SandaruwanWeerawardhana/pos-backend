@@ -8,7 +8,6 @@ import (
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/service"
 	appvalidator "github.com/SandaruwanWeerawardhana/pos-backend/internal/validator"
 	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/apperror"
-	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/response"
 )
 
 func parseAndValidate(c *fiber.Ctx, dst any) error {
@@ -55,6 +54,9 @@ func requestMeta(c *fiber.Ctx) service.RequestMeta {
 	}
 }
 
-func ok(c *fiber.Ctx, status int, message string, data any) error {
-	return c.Status(status).JSON(response.OK(middleware.RequestIDFromFiber(c), message, data))
+// ok writes data as the response body with no envelope around it. The
+// frontend's httpClient returns the parsed body directly to its caller, so
+// what a handler passes here is exactly what the client receives.
+func ok(c *fiber.Ctx, status int, data any) error {
+	return c.Status(status).JSON(data)
 }

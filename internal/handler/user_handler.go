@@ -10,7 +10,6 @@ import (
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/service"
 	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/apperror"
 	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/pagination"
-	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/response"
 )
 
 type UserHandler struct {
@@ -38,7 +37,7 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return ok(c, fiber.StatusCreated, "user created", mapper.ToUserResponse(*user, roles))
+	return ok(c, fiber.StatusCreated, mapper.ToUserResponse(*user, roles))
 }
 
 func (h *UserHandler) Get(c *fiber.Ctx) error {
@@ -54,7 +53,7 @@ func (h *UserHandler) Get(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return ok(c, fiber.StatusOK, "user retrieved", mapper.ToUserResponse(*user, roles))
+	return ok(c, fiber.StatusOK, mapper.ToUserResponse(*user, roles))
 }
 
 func (h *UserHandler) List(c *fiber.Ctx) error {
@@ -84,12 +83,14 @@ func (h *UserHandler) List(c *fiber.Ctx) error {
 		}
 		rolesByUserID[user.ID.String()] = roles
 	}
-	return c.Status(fiber.StatusOK).JSON(response.OKPaginated(
-		middleware.RequestIDFromFiber(c),
-		"users retrieved",
-		mapper.ToUserResponseList(users, rolesByUserID),
-		pagination.NewMeta(params, total),
-	))
+	// No envelope, but a paginated list still has to carry its page counts
+	// somewhere, so items and meta are siblings. Nothing on the frontend
+	// consumes this endpoint yet (staff management is Phase 2), so the shape is
+	// still free to change when a caller appears.
+	return ok(c, fiber.StatusOK, dto.UserListResponse{
+		Items: mapper.ToUserResponseList(users, rolesByUserID),
+		Meta:  pagination.NewMeta(params, total),
+	})
 }
 
 func (h *UserHandler) Update(c *fiber.Ctx) error {
@@ -119,7 +120,7 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return ok(c, fiber.StatusOK, "user updated", mapper.ToUserResponse(*user, roles))
+	return ok(c, fiber.StatusOK, mapper.ToUserResponse(*user, roles))
 }
 
 func (h *UserHandler) Delete(c *fiber.Ctx) error {

@@ -11,7 +11,11 @@ type JWTConfig struct {
 	AccessSecret  string `env:"JWT_ACCESS_SECRET" validate:"required,min=32"`
 	RefreshSecret string `env:"JWT_REFRESH_SECRET" validate:"required,min=32"`
 
-	AccessTTL  time.Duration `env:"JWT_ACCESS_TTL" envDefault:"15m" validate:"required"`
+	// 12h, not the usual 15m, because the client has no refresh flow: it decodes
+	// this token's `exp` and ends the session when it passes. A short TTL would
+	// log a cashier out mid-shift with no way to renew silently. Revocation
+	// still works immediately via the Redis denylist on logout.
+	AccessTTL  time.Duration `env:"JWT_ACCESS_TTL" envDefault:"12h" validate:"required"`
 	RefreshTTL time.Duration `env:"JWT_REFRESH_TTL" envDefault:"720h" validate:"required"`
 
 	Issuer   string `env:"JWT_ISSUER" envDefault:"pos-backend" validate:"required"`

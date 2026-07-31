@@ -15,7 +15,6 @@ import (
 
 	"github.com/SandaruwanWeerawardhana/pos-backend/config"
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/handler"
-	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/response"
 )
 
 func TestHealthRouteDoesNotRequireInfrastructure(t *testing.T) {
@@ -63,11 +62,12 @@ func TestHealthRouteDoesNotRequireInfrastructure(t *testing.T) {
 		t.Fatalf("status = %d, want %d", resp.StatusCode, fiber.StatusOK)
 	}
 
-	var envelope response.Envelope
-	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+	// No envelope: the handler's payload is the whole body.
+	var body map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if !envelope.Success {
-		t.Fatal("health response success = false")
+	if body["status"] != "ok" {
+		t.Fatalf("status = %q, want ok", body["status"])
 	}
 }

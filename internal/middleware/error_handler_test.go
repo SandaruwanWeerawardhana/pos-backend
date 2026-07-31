@@ -17,7 +17,7 @@ func newTestApp() *fiber.App {
 	return fiber.New(fiber.Config{ErrorHandler: ErrorHandler(logger)})
 }
 
-func TestErrorHandlerMapsAppErrorToEnvelope(t *testing.T) {
+func TestErrorHandlerMapsAppErrorToMessageBody(t *testing.T) {
 	app := newTestApp()
 	app.Get("/notfound", func(c *fiber.Ctx) error {
 		return apperror.New(apperror.CodeNotFound, "user not found")
@@ -35,8 +35,13 @@ func TestErrorHandlerMapsAppErrorToEnvelope(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if body["success"] != false || body["code"] != "NOT_FOUND" {
-		t.Errorf("unexpected body: %+v", body)
+	// The status code carries the category; the body carries only the message
+	// the client renders to a cashier.
+	if body["message"] != "user not found" {
+		t.Errorf("message = %v, want %q", body["message"], "user not found")
+	}
+	if len(body) != 1 {
+		t.Errorf("body has %d fields, want only message: %+v", len(body), body)
 	}
 }
 
