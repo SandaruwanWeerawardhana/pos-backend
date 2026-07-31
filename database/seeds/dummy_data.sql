@@ -44,29 +44,29 @@ DELETE FROM products WHERE id IN (
 INSERT INTO products (
     id, business_id, name, sku, barcode, barcode_source,
     price_cents, cost_cents, tax_rate, stock_quantity,
-    category, unit, product_type, storage_type,
-    is_weighted, track_expiry, reorder_level, min_stock_level
+    category, unit,
+    is_weighted, reorder_level, min_stock_level
 )
 SELECT v.id, b.id, v.name, v.sku, v.barcode, v.barcode_source,
        v.price_cents, v.cost_cents, v.tax_rate, v.stock_quantity,
-       v.category, v.unit, v.product_type, v.storage_type,
-       v.is_weighted, v.track_expiry, v.reorder_level, v.min_stock_level
+       v.category, v.unit,
+       v.is_weighted, v.reorder_level, v.min_stock_level
 FROM (SELECT id FROM businesses ORDER BY created_at LIMIT 1) b,
 (VALUES
     -- Sold per kg: fractional stock, so the weighted path gets exercised.
     ('11111111-1111-4111-8111-000000000001'::uuid, 'Bananas (Ambul)', 'BAN-001', '4011200296908',
      'generated', 45000::bigint, 32000::bigint, 0::numeric, 120.500::numeric,
-     'Produce', 'kg', 'fresh_produce', 'ambient', true, true, 20.000::numeric, 10.000::numeric),
+     'Produce', 'kg', true, 20.000::numeric, 10.000::numeric),
     -- The only taxed line, so tax_total_cents is non-zero on both orders.
     ('11111111-1111-4111-8111-000000000002'::uuid, 'Coca-Cola 330ml Can', 'COK-330', '5449000000996',
      'package', 25000::bigint, 18500::bigint, 0.0800::numeric, 240.000::numeric,
-     'Beverages', 'unit', 'beverage', 'chilled', false, false, 48.000::numeric, 24.000::numeric),
+     'Beverages', 'unit', false, 48.000::numeric, 24.000::numeric),
     ('11111111-1111-4111-8111-000000000003'::uuid, 'Sunrise Bread 450g', 'BRD-450', '4791234500017',
      'package', 21000::bigint, 15000::bigint, 0::numeric, 60.000::numeric,
-     'Bakery', 'unit', 'bakery', 'ambient', false, true, 15.000::numeric, 5.000::numeric)
+     'Bakery', 'unit', false, 15.000::numeric, 5.000::numeric)
 ) AS v(id, name, sku, barcode, barcode_source, price_cents, cost_cents, tax_rate,
-       stock_quantity, category, unit, product_type, storage_type, is_weighted,
-       track_expiry, reorder_level, min_stock_level);
+       stock_quantity, category, unit, is_weighted,
+       reorder_level, min_stock_level);
 
 -- ------------------------------------------------------------------ orders
 
