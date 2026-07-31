@@ -1,6 +1,5 @@
 .PHONY: build run lint fmt vet tidy test test-unit test-integration cover \
-	migrate-up migrate-down migrate-status seed swag \
-	docker-build docker-up docker-down
+	migrate-up migrate-down migrate-status seed swag
 
 BIN_DIR := bin
 
@@ -50,12 +49,3 @@ seed:
 
 swag:
 	swag init -g cmd/api/main.go -o docs
-
-docker-build:
-	docker compose build
-
-docker-up:
-	docker compose up -d
-
-docker-down:
-	docker compose down
