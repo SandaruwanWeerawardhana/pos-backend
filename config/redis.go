@@ -7,6 +7,12 @@ import (
 )
 
 type RedisConfig struct {
+	// Enabled=false drops Redis entirely and falls back to process-local
+	// in-memory stores for the token denylist and the rate limiter. That is a
+	// local-development convenience only: both lose their state on restart and
+	// are not shared between instances.
+	Enabled bool `env:"REDIS_ENABLED" envDefault:"true"`
+
 	Host     string `env:"REDIS_HOST" envDefault:"localhost" validate:"required"`
 	Port     int    `env:"REDIS_PORT" envDefault:"6379" validate:"required,min=1,max=65535"`
 	Password string `env:"REDIS_PASSWORD" envDefault:""`

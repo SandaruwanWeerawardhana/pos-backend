@@ -11,7 +11,13 @@ import (
 	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/apperror"
 )
 
-func redisStorage(cfg config.RedisConfig) *fiberredis.Storage {
+// limiterStorage returns nil when Redis is disabled, which makes Fiber's
+// limiter fall back to its own in-memory store — counters then live in one
+// process and reset on restart, so this is a local-development mode only.
+func limiterStorage(cfg config.RedisConfig) fiber.Storage {
+	if !cfg.Enabled {
+		return nil
+	}
 	return fiberredis.New(fiberredis.Config{
 		Host:     cfg.Host,
 		Port:     cfg.Port,
@@ -30,7 +36,7 @@ func RateLimit(redisCfg config.RedisConfig, max int, window time.Duration) fiber
 	return limiter.New(limiter.Config{
 		Max:               max,
 		Expiration:        window,
-		Storage:           redisStorage(redisCfg),
+		Storage:           limiterStorage(redisCfg),
 		LimiterMiddleware: limiter.SlidingWindow{},
 		LimitReached:      rateLimitExceeded,
 	})
@@ -44,7 +50,7 @@ func AuthRateLimit(redisCfg config.RedisConfig, max int, window time.Duration) f
 	return limiter.New(limiter.Config{
 		Max:               max,
 		Expiration:        window,
-		Storage:           redisStorage(redisCfg),
+		Storage:           limiterStorage(redisCfg),
 		LimiterMiddleware: limiter.SlidingWindow{},
 		KeyGenerator:      authRateLimitKey,
 		LimitReached:      rateLimitExceeded,

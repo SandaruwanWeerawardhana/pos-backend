@@ -27,12 +27,18 @@ func (h *HealthHandler) Ready(c *fiber.Ctx) error {
 	if err := h.db.PingContext(ctx); err != nil {
 		return apperror.Wrap(apperror.CodeServiceUnavailable, "database unavailable", err)
 	}
-	if err := h.redis.Ping(ctx).Err(); err != nil {
-		return apperror.Wrap(apperror.CodeServiceUnavailable, "redis unavailable", err)
+	// A nil client is REDIS_ENABLED=false, not a fault — readiness only
+	// reports what the process is actually depending on.
+	redisStatus := "disabled"
+	if h.redis != nil {
+		if err := h.redis.Ping(ctx).Err(); err != nil {
+			return apperror.Wrap(apperror.CodeServiceUnavailable, "redis unavailable", err)
+		}
+		redisStatus = "ok"
 	}
 	return ok(c, fiber.StatusOK, fiber.Map{
 		"status":   "ready",
 		"database": "ok",
-		"redis":    "ok",
+		"redis":    redisStatus,
 	})
 }

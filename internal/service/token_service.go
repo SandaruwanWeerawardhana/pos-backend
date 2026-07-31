@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/entity"
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/repository"
@@ -30,7 +29,7 @@ type TokenPair struct {
 }
 
 // TokenService owns the full lifecycle of both token kinds: minting,
-// refresh-token rotation with reuse detection, and the Redis denylist that
+// refresh-token rotation with reuse detection, and the TokenDenylist that
 // makes logout kill a still-valid access token immediately instead of
 // waiting out its 15-minute TTL.
 type TokenService interface {
@@ -53,15 +52,15 @@ type TokenService interface {
 
 type tokenService struct {
 	refreshRepo  repository.RefreshTokenRepository
-	redis        *redis.Client
+	denylist     TokenDenylist
 	accessIssuer *pkgjwt.Issuer
 	refreshTTL   time.Duration
 }
 
-func NewTokenService(refreshRepo repository.RefreshTokenRepository, redisClient *redis.Client, accessIssuer *pkgjwt.Issuer, refreshTTL time.Duration) TokenService {
+func NewTokenService(refreshRepo repository.RefreshTokenRepository, denylist TokenDenylist, accessIssuer *pkgjwt.Issuer, refreshTTL time.Duration) TokenService {
 	return &tokenService{
 		refreshRepo:  refreshRepo,
-		redis:        redisClient,
+		denylist:     denylist,
 		accessIssuer: accessIssuer,
 		refreshTTL:   refreshTTL,
 	}
@@ -131,15 +130,11 @@ func (s *tokenService) DenylistAccessToken(ctx context.Context, jti string, ttl 
 	if ttl <= 0 {
 		return nil // already expired, nothing to deny
 	}
-	return s.redis.Set(ctx, denylistKeyPrefix+jti, "1", ttl).Err()
+	return s.denylist.Add(ctx, jti, ttl)
 }
 
 func (s *tokenService) IsAccessTokenDenylisted(ctx context.Context, jti string) (bool, error) {
-	n, err := s.redis.Exists(ctx, denylistKeyPrefix+jti).Result()
-	if err != nil {
-		return false, err
-	}
-	return n > 0, nil
+	return s.denylist.Has(ctx, jti)
 }
 
 func (s *tokenService) issue(ctx context.Context, userID, businessID, branchID uuid.UUID, roles []string, familyID uuid.UUID, parentID *uuid.UUID, userAgent, ip string) (TokenPair, error) {

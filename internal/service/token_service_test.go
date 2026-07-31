@@ -33,7 +33,7 @@ func newTestTokenService(t *testing.T) (*tokenService, *mocks.MockRefreshTokenRe
 
 	svc := &tokenService{
 		refreshRepo:  refreshRepo,
-		redis:        rdb,
+		denylist:     NewRedisDenylist(rdb),
 		accessIssuer: issuer,
 		refreshTTL:   720 * time.Hour,
 	}

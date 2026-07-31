@@ -70,6 +70,16 @@ func NewContainer(ctx context.Context) (*Container, error) {
 		return nil, err
 	}
 
+	// A nil client means REDIS_ENABLED=false: the denylist and the rate
+	// limiter degrade to process-local memory, which only holds up for a
+	// single local instance.
+	denylist := service.TokenDenylist(service.NewMemoryDenylist())
+	if redisClient != nil {
+		denylist = service.NewRedisDenylist(redisClient)
+	} else {
+		logger.Warn("redis disabled: token denylist and rate limits are in-memory, per-process, and lost on restart")
+	}
+
 	users := repository.NewUserRepository(db)
 	businesses := repository.NewBusinessRepository(db)
 	branches := repository.NewBranchRepository(db)
@@ -89,7 +99,7 @@ func NewContainer(ctx context.Context) (*Container, error) {
 		cfg.JWT.Audience,
 		cfg.JWT.AccessTTL,
 	)
-	tokenService := service.NewTokenService(refreshTokens, redisClient, issuer, cfg.JWT.RefreshTTL)
+	tokenService := service.NewTokenService(refreshTokens, denylist, issuer, cfg.JWT.RefreshTTL)
 	auditService := service.NewAuditService(auditLogs)
 	auditWorker := middleware.NewAuditWorker(auditService, auditQueueSize, logger)
 	authService := service.NewAuthService(service.AuthServiceDeps{
@@ -149,8 +159,10 @@ func (c *Container) Close() error {
 	} else if err = sqlDB.Close(); err != nil {
 		closeErr = err
 	}
-	if err := c.Redis.Close(); err != nil && closeErr == nil {
-		closeErr = err
+	if c.Redis != nil {
+		if err := c.Redis.Close(); err != nil && closeErr == nil {
+			closeErr = err
+		}
 	}
 	return closeErr
 }
