@@ -40,14 +40,13 @@ const (
 // fractional (0.08 = 8%) and DiscountPercent is 0-100. Quantities are float64
 // because weighted items priced per kg carry fractional stock.
 //
-// The products table still carries columns this struct does not map
-// (product_code, qr_code, subcategory, branch, warehouse_id, product_type,
-// storage_type, is_variable_weight, allow_discount, allow_returns,
-// track_expiry, track_batch, purchase_price_cents, supplier_product_code).
-// Nothing on either side of the wire read or wrote them, so they were dropped
-// from the model rather than the schema — every one is nullable or defaulted,
-// so INSERTs that omit them are accepted as-is. Re-add the field here if a
-// feature ever needs one; no migration is required to do so.
+// This struct maps every column on the products table. It once omitted a set
+// of speculative ones (product_code, qr_code, subcategory, branch,
+// warehouse_id, product_type, storage_type, is_variable_weight,
+// allow_discount, allow_returns, track_expiry, track_batch,
+// purchase_price_cents, supplier_product_code) that neither side of the wire
+// ever read or wrote; those have since been dropped from the schema too, so a
+// field added here now needs a migration to go with it.
 type Product struct {
 	IDMixin
 	Timestamps
