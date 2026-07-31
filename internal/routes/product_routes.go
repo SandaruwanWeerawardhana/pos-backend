@@ -9,4 +9,7 @@ import (
 func registerProducts(app *fiber.App, h *handler.ProductHandler, auth fiber.Handler) {
 	group := app.Group("/products", auth)
 	group.Get("/", h.List)
+	group.Post("/", h.Create)
+	group.Put("/:id", h.Update)
+	group.Delete("/:id", h.Delete)
 }

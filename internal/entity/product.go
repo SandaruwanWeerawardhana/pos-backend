@@ -33,32 +33,21 @@ const (
 	UnitBox  = "box"
 )
 
-// Merchandising group, driving the storage/expiry defaults a grocer expects.
-const (
-	ProductTypeRegular      = "regular"
-	ProductTypeFreshProduce = "fresh_produce"
-	ProductTypeFrozen       = "frozen"
-	ProductTypeDairy        = "dairy"
-	ProductTypeBakery       = "bakery"
-	ProductTypeBeverage     = "beverage"
-	ProductTypeMeat         = "meat"
-	ProductTypeSeafood      = "seafood"
-	ProductTypeHousehold    = "household"
-	ProductTypePersonalCare = "personal_care"
-)
-
-const (
-	StorageTypeAmbient = "ambient"
-	StorageTypeChilled = "chilled"
-	StorageTypeFrozen  = "frozen"
-)
-
 // Product is a catalogue row.
 //
 // Money fields are integer cents (int64), never floats. TaxRate and
 // DiscountPercent are the exceptions: rates, not currency — TaxRate is
 // fractional (0.08 = 8%) and DiscountPercent is 0-100. Quantities are float64
 // because weighted items priced per kg carry fractional stock.
+//
+// The products table still carries columns this struct does not map
+// (product_code, qr_code, subcategory, branch, warehouse_id, product_type,
+// storage_type, is_variable_weight, allow_discount, allow_returns,
+// track_expiry, track_batch, purchase_price_cents, supplier_product_code).
+// Nothing on either side of the wire read or wrote them, so they were dropped
+// from the model rather than the schema — every one is nullable or defaulted,
+// so INSERTs that omit them are accepted as-is. Re-add the field here if a
+// feature ever needs one; no migration is required to do so.
 type Product struct {
 	IDMixin
 	Timestamps
@@ -71,27 +60,18 @@ type Product struct {
 
 	BarcodeSource string `gorm:"column:barcode_source;not null"`
 
-	PriceCents         int64   `gorm:"column:price_cents;not null"`
-	CostCents          *int64  `gorm:"column:cost_cents"`
-	PurchasePriceCents *int64  `gorm:"column:purchase_price_cents"`
-	TaxRate            float64 `gorm:"column:tax_rate;not null"`
-	StockQuantity      float64 `gorm:"column:stock_quantity;not null"`
+	PriceCents    int64   `gorm:"column:price_cents;not null"`
+	CostCents     *int64  `gorm:"column:cost_cents"`
+	TaxRate       float64 `gorm:"column:tax_rate;not null"`
+	StockQuantity float64 `gorm:"column:stock_quantity;not null"`
 
 	Category    *string `gorm:"column:category"`
-	Subcategory *string `gorm:"column:subcategory"`
 	Brand       *string `gorm:"column:brand"`
 	Description *string `gorm:"column:description"`
 	Unit        string  `gorm:"column:unit;not null"`
 	Status      string  `gorm:"column:status;not null"`
-	ProductType string  `gorm:"column:product_type;not null"`
-	StorageType string  `gorm:"column:storage_type;not null"`
 
-	IsWeighted       bool `gorm:"column:is_weighted;not null"`
-	IsVariableWeight bool `gorm:"column:is_variable_weight;not null"`
-	AllowDiscount    bool `gorm:"column:allow_discount;not null"`
-	AllowReturns     bool `gorm:"column:allow_returns;not null"`
-	TrackExpiry      bool `gorm:"column:track_expiry;not null"`
-	TrackBatch       bool `gorm:"column:track_batch;not null"`
+	IsWeighted bool `gorm:"column:is_weighted;not null"`
 
 	// ReorderLevel triggers the low-stock alert; MinStockLevel is the hard
 	// floor. Distinct thresholds, deliberately separate fields.
@@ -99,21 +79,16 @@ type Product struct {
 	MinStockLevel   *float64 `gorm:"column:min_stock_level"`
 	DiscountPercent float64  `gorm:"column:discount_percent;not null"`
 
-	ProductCode         *string `gorm:"column:product_code"`
-	QRCode              *string `gorm:"column:qr_code"`
-	ShelfLocation       *string `gorm:"column:shelf_location"`
-	Branch              *string `gorm:"column:branch"`
-	SupplierProductCode *string `gorm:"column:supplier_product_code"`
-	ImageURL            *string `gorm:"column:image_url"`
+	ShelfLocation *string `gorm:"column:shelf_location"`
+	ImageURL      *string `gorm:"column:image_url"`
 
 	// Images is an ordered list of data URLs; PluginData is opaque key/value
 	// owned by the active business-type plugin. Neither is queried by content.
 	Images     datatypes.JSON `gorm:"column:images;not null;default:'[]'"`
 	PluginData datatypes.JSON `gorm:"column:plugin_data;not null;default:'{}'"`
 
-	// No foreign keys until the Phase 2 suppliers/warehouses tables exist.
-	SupplierID  *uuid.UUID `gorm:"column:supplier_id"`
-	WarehouseID *uuid.UUID `gorm:"column:warehouse_id"`
+	// No foreign key until the Phase 2 suppliers table exists.
+	SupplierID *uuid.UUID `gorm:"column:supplier_id"`
 
 	// Loaded explicitly via Preload: most catalogue reads never touch batches.
 	Batches []ProductBatch `gorm:"foreignKey:ProductID;references:ID"`

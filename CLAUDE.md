@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 POS (Point of Sale) backend. Go + Fiber + PostgreSQL + Redis. Multi-tenant with role-based permissions.
 
-API is HTTP-only, no gRPC. Frontend at pos-frontend/ calls eight endpoints (Phase 1) — shapes in docs/API_CONTRACT.md are the spec. Frontend caches product catalogue in IndexedDB; offline-first, syncs orders back in batches of ≤ 50.
+API is HTTP-only, no gRPC. Frontend at pos-frontend/ calls eleven endpoints (Phase 1) — shapes in docs/API_CONTRACT.md are the spec. Frontend caches product catalogue in IndexedDB; offline-first, syncs orders back in batches of ≤ 50 and pushes product creates, edits and deletes one at a time.
 
 ## Stack
 
@@ -153,7 +153,7 @@ make tidy       # go mod tidy
 
 ## API contract
 
-See docs/API_CONTRACT.md — it is the spec. Phase 1 is eight endpoints (auth, products, order sync, profile). Phase 2 includes product writes, refunds, inventory adjustments, purchasing, staff/PIN auth.
+See docs/API_CONTRACT.md — it is the spec. Phase 1 is eleven endpoints (auth, product CRUD, order sync, profile). Phase 2 includes refunds, stock adjustments, purchasing, staff/PIN auth.
 
 Endpoints:
 - `POST /auth/register` → 201, `{token, user}`
@@ -163,6 +163,9 @@ Endpoints:
 - `POST /auth/password/change` → 200, `{}`
 - `PATCH /auth/profile` → 200, `{user}`
 - `GET /products` → 200, bare array
+- `POST /products` → 201 (new) / 200 (already stored), the product; idempotent on the client-generated `id`
+- `PUT /products/:id` → 200, the product; full replace (not a patch), `stock_quantity` and `batches` are server-owned and not writable
+- `DELETE /products/:id` → 204; soft delete, frees the SKU/barcode via the partial unique indexes
 - `POST /orders/sync` → 200, `{results[]}`
 
 All except register/login require `Authorization: Bearer {token}`.
