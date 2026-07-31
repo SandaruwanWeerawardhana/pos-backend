@@ -24,7 +24,6 @@ API is HTTP-only, no gRPC. Frontend at pos-frontend/ calls eight endpoints (Phas
 ```bash
 make run                    # API on localhost:8080
 make build                  # bin/api, bin/migrate, bin/seed
-make docker-up              # docker-compose up
 ```
 
 Config from `.env` (local dev only). Prod uses real env vars; `.env` is ignored by the app. Every var in `.env.example` is required; many have sensible defaults but `JWT_*_SECRET` do not.
@@ -33,11 +32,11 @@ Config from `.env` (local dev only). Prod uses real env vars; `.env` is ignored 
 
 ```bash
 make test                   # unit tests (-short -race)
-make test-integration       # integration tests (needs Docker/DB running)
+make test-integration       # integration tests (needs local Postgres/Redis running)
 make cover                  # coverage report for internal/ and pkg/
 ```
 
-Failing test? Run `docker ps` — integration tests need a live Postgres and Redis. Start them with `make docker-up`.
+Failing test? Integration tests need a live local Postgres and Redis — check they're running and reachable per `.env`.
 
 ## Database
 
@@ -228,7 +227,7 @@ If adding a permission:
 
 Before developing:
 - [ ] Go 1.25+
-- [ ] Docker (for postgres + redis; use `make docker-up`)
+- [ ] Local Postgres + Redis running, reachable per `.env` (DB_HOST/PORT, REDIS_HOST/PORT)
 - [ ] cp .env.example .env
 - [ ] `make migrate-up` and `make seed`
 - [ ] `make run` — should listen on 8080
