@@ -1,9 +1,13 @@
-package service
+package service_test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/SandaruwanWeerawardhana/pos-backend/internal/service"
+)
 
 /*
-computeTotals has to agree with the client's computeCartTotal
+ComputeTotals has to agree with the client's computeCartTotal
 (pos-frontend/src/lib/cart-math.ts) to the cent. Any divergence flags honest
 sales as mismatched, so the expected values below are what that function
 produces for the same inputs — they are the contract, not a description of
@@ -12,7 +16,7 @@ this implementation.
 func TestComputeTotals(t *testing.T) {
 	tests := []struct {
 		name          string
-		items         []SyncOrderItem
+		items         []service.SyncOrderItem
 		discountCents int64
 		wantSubtotal  int64
 		wantTax       int64
@@ -20,7 +24,7 @@ func TestComputeTotals(t *testing.T) {
 	}{
 		{
 			name: "single untaxed line",
-			items: []SyncOrderItem{
+			items: []service.SyncOrderItem{
 				{UnitPriceCents: 199, Quantity: 2, TaxRate: 0},
 			},
 			wantSubtotal: 398,
@@ -29,7 +33,7 @@ func TestComputeTotals(t *testing.T) {
 		},
 		{
 			name: "tax rounded per line, not once at the end",
-			items: []SyncOrderItem{
+			items: []service.SyncOrderItem{
 				/*
 					219*1*0.08 = 17.52 -> 18, and 129*1*0.08 = 10.32 -> 10.
 					Summing first (348*0.08 = 27.84 -> 28) would give 28, so this
@@ -44,7 +48,7 @@ func TestComputeTotals(t *testing.T) {
 		},
 		{
 			name: "fractional weight quantity",
-			items: []SyncOrderItem{
+			items: []service.SyncOrderItem{
 				/*
 					A weighted item priced per kg: 899 cents/kg * 0.457 kg.
 				*/
@@ -62,7 +66,7 @@ func TestComputeTotals(t *testing.T) {
 		},
 		{
 			name: "discounted weighted line clamps against the rounded subtotal",
-			items: []SyncOrderItem{
+			items: []service.SyncOrderItem{
 				{UnitPriceCents: 899, Quantity: 0.457, TaxRate: 0.08},
 			},
 			/*
@@ -78,7 +82,7 @@ func TestComputeTotals(t *testing.T) {
 		},
 		{
 			name: "order discount scales tax proportionally",
-			items: []SyncOrderItem{
+			items: []service.SyncOrderItem{
 				{UnitPriceCents: 1000, Quantity: 1, TaxRate: 0.10},
 			},
 			discountCents: 500,
@@ -91,7 +95,7 @@ func TestComputeTotals(t *testing.T) {
 		},
 		{
 			name: "discount larger than subtotal is clamped, never negative",
-			items: []SyncOrderItem{
+			items: []service.SyncOrderItem{
 				{UnitPriceCents: 500, Quantity: 1, TaxRate: 0.10},
 			},
 			discountCents: 900,
@@ -101,7 +105,7 @@ func TestComputeTotals(t *testing.T) {
 		},
 		{
 			name: "line_discount_cents does not affect the total",
-			items: []SyncOrderItem{
+			items: []service.SyncOrderItem{
 				/*
 					The client tracks a per-line discount but does not subtract it
 					in computeCartTotal, so neither may this.
@@ -123,8 +127,8 @@ func TestComputeTotals(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			in := SyncOrderInput{Items: tt.items, DiscountCents: tt.discountCents}
-			subtotal, tax, total := computeTotals(in)
+			in := service.SyncOrderInput{Items: tt.items, DiscountCents: tt.discountCents}
+			subtotal, tax, total := service.ComputeTotals(in)
 
 			if subtotal != tt.wantSubtotal {
 				t.Errorf("subtotal = %d, want %d", subtotal, tt.wantSubtotal)
@@ -143,12 +147,12 @@ func TestComputeTotals(t *testing.T) {
 A negative discount must not inflate the total by being added back.
 */
 func TestComputeTotalsIgnoresNegativeDiscount(t *testing.T) {
-	in := SyncOrderInput{
-		Items:         []SyncOrderItem{{UnitPriceCents: 1000, Quantity: 1}},
+	in := service.SyncOrderInput{
+		Items:         []service.SyncOrderItem{{UnitPriceCents: 1000, Quantity: 1}},
 		DiscountCents: -500,
 	}
 
-	subtotal, _, total := computeTotals(in)
+	subtotal, _, total := service.ComputeTotals(in)
 
 	if subtotal != 1000 || total != 1000 {
 		t.Errorf("subtotal/total = %d/%d, want 1000/1000", subtotal, total)

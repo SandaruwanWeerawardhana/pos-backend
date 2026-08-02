@@ -1,7 +1,8 @@
-package service
+package service_test
 
 import (
 	"context"
+	"github.com/SandaruwanWeerawardhana/pos-backend/internal/service"
 	"testing"
 	"time"
 
@@ -17,7 +18,16 @@ import (
 	pkgjwt "github.com/SandaruwanWeerawardhana/pos-backend/pkg/jwt"
 )
 
-func newTestTokenService(t *testing.T) (*tokenService, *mocks.MockRefreshTokenRepository) {
+/*
+Builds the service through its exported constructor rather than by filling the
+tokenService struct literal directly, which is what the in-package version of
+this test did. Same four dependencies, same values — but the struct is
+unexported, so from outside the package the constructor is the only way in.
+
+That also means these tests now exercise the service strictly through the
+TokenService interface, which is what every caller in the application uses.
+*/
+func newTestTokenService(t *testing.T) (service.TokenService, *mocks.MockRefreshTokenRepository) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	refreshRepo := mocks.NewMockRefreshTokenRepository(ctrl)
@@ -31,12 +41,12 @@ func newTestTokenService(t *testing.T) (*tokenService, *mocks.MockRefreshTokenRe
 
 	issuer := pkgjwt.NewIssuer("test-secret-at-least-32-bytes-long!", "pos-backend", "pos-frontend", 15*time.Minute)
 
-	svc := &tokenService{
-		refreshRepo:  refreshRepo,
-		denylist:     NewRedisDenylist(rdb),
-		accessIssuer: issuer,
-		refreshTTL:   720 * time.Hour,
-	}
+	svc := service.NewTokenService(
+		refreshRepo,
+		service.NewRedisDenylist(rdb),
+		issuer,
+		720*time.Hour,
+	)
 	return svc, refreshRepo
 }
 

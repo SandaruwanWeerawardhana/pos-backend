@@ -1,7 +1,8 @@
-package service
+package service_test
 
 import (
 	"context"
+	"github.com/SandaruwanWeerawardhana/pos-backend/internal/service"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,11 +15,11 @@ import (
 	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/hash"
 )
 
-func newTestUserService(t *testing.T) (UserService, *mocks.MockUserRepository) {
+func newTestUserService(t *testing.T) (service.UserService, *mocks.MockUserRepository) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	repo := mocks.NewMockUserRepository(ctrl)
-	return NewUserService(repo, 4), repo
+	return service.NewUserService(repo, 4), repo
 }
 
 func TestUserCreateRejectsDuplicateEmail(t *testing.T) {
@@ -63,7 +64,7 @@ func TestUserCreateRejectsCrossTenantRole(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	users := mocks.NewMockUserRepository(ctrl)
 	roles := mocks.NewMockRoleRepository(ctrl)
-	svc := NewUserService(users, 4, roles)
+	svc := service.NewUserService(users, 4, roles)
 	ctx := context.Background()
 	businessID := uuid.New()
 	otherBusinessID := uuid.New()

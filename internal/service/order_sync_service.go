@@ -185,7 +185,7 @@ func (s *orderSyncService) syncOne(
 		The client sends no subtotal, so derive it: it is the figure the tax and
 		total are built from and is worth storing for reporting.
 	*/
-	subtotal, serverTax, serverTotal := computeTotals(in)
+	subtotal, serverTax, serverTotal := ComputeTotals(in)
 	order.SubtotalCents = subtotal
 
 	/*
@@ -275,8 +275,15 @@ func (s *orderSyncService) syncOne(
 }
 
 /*
-computeTotals recomputes the sale independently of the client, returning
+ComputeTotals recomputes the sale independently of the client, returning
 post-discount subtotal, tax, and grand total in cents.
+
+Exported because it is the server's half of a two-sided contract, not a private
+helper: it must agree to the cent with computeCartTotal on the till, and the
+test that pins that agreement lives outside this package (test/service). A
+mismatch here is not a crash — it silently flags honest sales for review — so
+the parity test is the only thing that catches a drift, and it needs to be able
+to call this.
 
 This mirrors computeCartTotal in pos-frontend/src/lib/cart-math.ts step for
 step, because any deviation would flag honest sales as mismatched and make the
@@ -297,7 +304,7 @@ now round at the same point.
 Float arithmetic is deliberate here for the same reason: integer maths would
 round differently from the client and produce spurious mismatches.
 */
-func computeTotals(in SyncOrderInput) (subtotal, tax, total int64) {
+func ComputeTotals(in SyncOrderInput) (subtotal, tax, total int64) {
 	var rawSubtotal float64
 	var rawTax int64
 	for _, item := range in.Items {
