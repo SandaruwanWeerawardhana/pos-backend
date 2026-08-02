@@ -1,7 +1,8 @@
-package service
+package service_test
 
 import (
 	"context"
+	"github.com/SandaruwanWeerawardhana/pos-backend/internal/service"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,11 +14,11 @@ import (
 	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/apperror"
 )
 
-func newTestRoleService(t *testing.T) (RoleService, *mocks.MockRoleRepository) {
+func newTestRoleService(t *testing.T) (service.RoleService, *mocks.MockRoleRepository) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	repo := mocks.NewMockRoleRepository(ctrl)
-	return NewRoleService(repo), repo
+	return service.NewRoleService(repo), repo
 }
 
 func TestRoleCreateRejectsDuplicateName(t *testing.T) {

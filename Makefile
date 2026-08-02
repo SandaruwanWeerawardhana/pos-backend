@@ -31,8 +31,13 @@ test-unit:
 test-integration:
 	go test -race -tags=integration ./test/integration/...
 
+# -coverpkg is required, not cosmetic: the service tests live in ./test/service,
+# and without it Go credits their coverage to that package instead of to
+# internal/service, which then reports as untested.
 cover:
-	go test -race -coverprofile=coverage.out ./internal/... ./pkg/...
+	go test -race -coverprofile=coverage.out \
+		-coverpkg=./internal/...,./pkg/... \
+		./internal/... ./pkg/... ./test/...
 	go tool cover -func=coverage.out
 
 migrate-up:

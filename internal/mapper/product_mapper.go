@@ -79,10 +79,9 @@ func ToProductResponseList(products []entity.Product) []dto.ProductResponse {
 // from the client so the push is idempotent on replay; business_id comes from
 // the token, never the body.
 //
-// Columns this struct does not set (product_type, storage_type, allow_discount,
-// and the rest listed on entity.Product) fall to their schema defaults.
-// Unit/status likewise: an empty string here would violate the column's CHECK,
-// so an absent value is left to the default rather than written through.
+// Unit and status fall to their schema defaults when absent: an empty string
+// here would violate the column's CHECK, so a missing value is left to the
+// default rather than written through.
 func ToProductEntity(businessID, id uuid.UUID, req dto.ProductCreateRequest) entity.Product {
 	p := entity.Product{
 		BusinessID: businessID,

@@ -70,9 +70,11 @@ func NewContainer(ctx context.Context) (*Container, error) {
 		return nil, err
 	}
 
-	// A nil client means REDIS_ENABLED=false: the denylist and the rate
-	// limiter degrade to process-local memory, which only holds up for a
-	// single local instance.
+	/*
+		A nil client means REDIS_ENABLED=false: the denylist and the rate
+		limiter degrade to process-local memory, which only holds up for a
+		single local instance.
+	*/
 	denylist := service.TokenDenylist(service.NewMemoryDenylist())
 	if redisClient != nil {
 		denylist = service.NewRedisDenylist(redisClient)
@@ -89,8 +91,11 @@ func NewContainer(ctx context.Context) (*Container, error) {
 	passwordResets := repository.NewPasswordResetRepository(db)
 	auditLogs := repository.NewAuditLogRepository(db)
 	products := repository.NewProductRepository(db)
+	/*
+		Non-transactional binding, for the read path. Order sync rebinds its own
+		repositories to each order's transaction and does not use this one.
+	*/
 	orders := repository.NewOrderRepository(db)
-	stock := repository.NewStockRepository(db)
 	tx := repository.NewTxManager(db)
 
 	issuer := pkgjwt.NewIssuer(
@@ -124,9 +129,8 @@ func NewContainer(ctx context.Context) (*Container, error) {
 		users, passwordResets, tokenService, cfg.Bcrypt.Cost,
 	)
 	productService := service.NewProductService(products)
-	orderSyncService := service.NewOrderSyncService(
-		orders, stock, tx, service.DefaultOrderTxRepos,
-	)
+	orderSyncService := service.NewOrderSyncService(tx, service.DefaultOrderTxRepos)
+	orderService := service.NewOrderService(orders)
 
 	closeDB = false
 	return &Container{
@@ -138,13 +142,15 @@ func NewContainer(ctx context.Context) (*Container, error) {
 		Permissions: permissionService,
 		AuditWorker: auditWorker,
 		Handlers: routes.Handlers{
-			// The reset token is echoed back in the response only in a local
-			// environment, where there is no mail server to deliver it.
+			/*
+				The reset token is echoed back in the response only in a local
+				environment, where there is no mail server to deliver it.
+			*/
 			Auth:    handler.NewAuthHandler(authService, passwordResetService, cfg.App.IsLocal()),
 			User:    handler.NewUserHandler(userService),
 			Role:    handler.NewRoleHandler(roleService),
 			Product: handler.NewProductHandler(productService),
-			Order:   handler.NewOrderHandler(orderSyncService),
+			Order:   handler.NewOrderHandler(orderSyncService, orderService),
 		},
 		Health: handler.NewHealthHandler(sqlDB, redisClient),
 	}, nil

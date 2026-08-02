@@ -1,8 +1,9 @@
-package service
+package service_test
 
 import (
 	"context"
 	"encoding/json"
+	"github.com/SandaruwanWeerawardhana/pos-backend/internal/service"
 	"testing"
 
 	"github.com/google/uuid"
@@ -15,7 +16,7 @@ import (
 func TestAuditLogPopulatesOptionalFieldsOnlyWhenSet(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	repo := mocks.NewMockAuditLogRepository(ctrl)
-	svc := NewAuditService(repo)
+	svc := service.NewAuditService(repo)
 
 	businessID := uuid.New()
 	userID := uuid.New()
@@ -36,7 +37,7 @@ func TestAuditLogPopulatesOptionalFieldsOnlyWhenSet(t *testing.T) {
 		return nil
 	})
 
-	err := svc.Log(context.Background(), AuditEntry{
+	err := svc.Log(context.Background(), service.AuditEntry{
 		BusinessID: &businessID,
 		UserID:     &userID,
 		Action:     entity.AuditActionLogin,
@@ -51,7 +52,7 @@ func TestAuditLogPopulatesOptionalFieldsOnlyWhenSet(t *testing.T) {
 func TestAuditLogLeavesOptionalFieldsNilWhenNotSet(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	repo := mocks.NewMockAuditLogRepository(ctrl)
-	svc := NewAuditService(repo)
+	svc := service.NewAuditService(repo)
 
 	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, log *entity.AuditLog) error {
 		if log.BusinessID != nil || log.UserID != nil || log.IPAddress != nil || log.UserAgent != nil || log.RequestID != nil {
@@ -60,7 +61,7 @@ func TestAuditLogLeavesOptionalFieldsNilWhenNotSet(t *testing.T) {
 		return nil
 	})
 
-	err := svc.Log(context.Background(), AuditEntry{
+	err := svc.Log(context.Background(), service.AuditEntry{
 		Action: entity.AuditActionLogin,
 		Status: entity.AuditStatusFailure,
 	})
@@ -72,7 +73,7 @@ func TestAuditLogLeavesOptionalFieldsNilWhenNotSet(t *testing.T) {
 func TestAuditLogMarshalsNewValues(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	repo := mocks.NewMockAuditLogRepository(ctrl)
-	svc := NewAuditService(repo)
+	svc := service.NewAuditService(repo)
 
 	repo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, log *entity.AuditLog) error {
 		var decoded map[string]string
@@ -85,7 +86,7 @@ func TestAuditLogMarshalsNewValues(t *testing.T) {
 		return nil
 	})
 
-	err := svc.Log(context.Background(), AuditEntry{
+	err := svc.Log(context.Background(), service.AuditEntry{
 		Action:    entity.AuditActionLogin,
 		Status:    entity.AuditStatusFailure,
 		NewValues: map[string]string{"reason": "invalid credentials"},
