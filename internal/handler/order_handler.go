@@ -7,16 +7,121 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/dto"
+	"github.com/SandaruwanWeerawardhana/pos-backend/internal/mapper"
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/middleware"
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/service"
+	appvalidator "github.com/SandaruwanWeerawardhana/pos-backend/internal/validator"
+	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/apperror"
+	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/pagination"
 )
 
 type OrderHandler struct {
-	sync service.OrderSyncService
+	sync   service.OrderSyncService
+	orders service.OrderService
 }
 
-func NewOrderHandler(sync service.OrderSyncService) *OrderHandler {
-	return &OrderHandler{sync: sync}
+func NewOrderHandler(sync service.OrderSyncService, orders service.OrderService) *OrderHandler {
+	return &OrderHandler{sync: sync, orders: orders}
+}
+
+// List serves GET /orders: one page of the business's sales, newest first.
+//
+// Paginated, unlike GET /products. The catalogue is bounded and the till caches
+// all of it to sell offline; sales history only grows, and no screen needs the
+// whole of it at once.
+//
+// The response keys orders by client_generated_id as well as id, because the
+// client overlays its own unsynced sales on this list and needs to recognise
+// the ones it has already pushed.
+func (h *OrderHandler) List(c *fiber.Ctx) error {
+	var query dto.OrderListQuery
+	if err := c.QueryParser(&query); err != nil {
+		return apperror.Wrap(apperror.CodeBadRequest, "invalid query parameters", err)
+	}
+	if err := appvalidator.Struct(&query); err != nil {
+		return err
+	}
+
+	// Parse clamps page/per_page and rejects a sort field that is not on the
+	// whitelist. That check is load-bearing: Sort is interpolated into ORDER BY
+	// further down, which GORM does not escape.
+	params, err := pagination.Parse(
+		query.Page, query.PerPage, query.Sort, query.Order, query.Search,
+		dto.OrderSortFields,
+	)
+	if err != nil {
+		return err
+	}
+
+	from, to, err := parseSoldAtWindow(query.From, query.To)
+	if err != nil {
+		return err
+	}
+
+	page, err := h.orders.List(c.UserContext(), middleware.BusinessID(c), service.OrderListQuery{
+		Limit:         params.PerPage,
+		Offset:        params.Offset(),
+		Sort:          params.Sort,
+		Order:         params.Order,
+		Search:        params.Search,
+		PaymentMethod: query.PaymentMethod,
+		From:          from,
+		To:            to,
+	})
+	if err != nil {
+		return err
+	}
+
+	return ok(c, fiber.StatusOK, dto.OrderListResponse{
+		Orders: mapper.ToOrderResponseList(page.Orders),
+		Meta:   pagination.NewMeta(params, page.Total),
+	})
+}
+
+// Get serves GET /orders/{clientGeneratedID}, the receipt behind one sale.
+//
+// Keyed on the till's own id rather than the server's, because that is what the
+// client holds and what its sales list links to. A sale it has not pushed yet
+// has no server row at all, so the client must fall back to its local copy on a
+// 404 rather than treating it as an error.
+func (h *OrderHandler) Get(c *fiber.Ctx) error {
+	clientGeneratedID := c.Params("clientGeneratedID")
+	if clientGeneratedID == "" {
+		return apperror.New(apperror.CodeValidationError, "client_generated_id is required")
+	}
+
+	order, err := h.orders.GetByClientID(
+		c.UserContext(), middleware.BusinessID(c), clientGeneratedID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return ok(c, fiber.StatusOK, mapper.ToOrderResponse(*order))
+}
+
+// parseSoldAtWindow converts the epoch-millisecond bounds into times, rejecting
+// an inverted range rather than silently returning nothing — a screen showing
+// zero sales for a range it thinks is valid reads as lost revenue.
+func parseSoldAtWindow(fromMillis, toMillis int64) (from, to time.Time, err error) {
+	if fromMillis > 0 {
+		from = time.UnixMilli(fromMillis)
+	}
+	if toMillis > 0 {
+		to = time.UnixMilli(toMillis)
+	}
+	if !from.IsZero() && !to.IsZero() && to.Before(from) {
+		return time.Time{}, time.Time{}, apperror.WithFields(
+			apperror.CodeValidationError,
+			"validation failed",
+			[]apperror.FieldError{{
+				Field:   "to",
+				Rule:    "gtefield",
+				Message: "to must not be earlier than from",
+			}},
+		)
+	}
+	return from, to, nil
 }
 
 // Sync serves POST /orders/sync.
@@ -33,9 +138,21 @@ func (h *OrderHandler) Sync(c *fiber.Ctx) error {
 	}
 
 	branchID := branchIDOrNil(c)
+	// The authenticated user is the fallback attribution for a sale whose body
+	// carries no cashier_id. Without it those orders landed with a NULL
+	// cashier_id and dropped out of every per-cashier report, even though the
+	// request was made by a known, logged-in user. A cashier_id the client does
+	// send is still honoured: Phase 2 staff/PIN auth rings up sales under the
+	// staff member rather than the device's token holder.
+	tokenUserID := middleware.UserID(c)
+
 	inputs := make([]service.SyncOrderInput, 0, len(req.Orders))
 	for _, order := range req.Orders {
-		inputs = append(inputs, toSyncOrderInput(order))
+		in := toSyncOrderInput(order)
+		if in.CashierID == nil && tokenUserID != uuid.Nil {
+			in.CashierID = &tokenUserID
+		}
+		inputs = append(inputs, in)
 	}
 
 	outcomes := h.sync.Sync(c.UserContext(), middleware.BusinessID(c), branchID, inputs)

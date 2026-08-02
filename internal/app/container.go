@@ -89,6 +89,9 @@ func NewContainer(ctx context.Context) (*Container, error) {
 	passwordResets := repository.NewPasswordResetRepository(db)
 	auditLogs := repository.NewAuditLogRepository(db)
 	products := repository.NewProductRepository(db)
+	// Non-transactional binding, for the read path. Order sync rebinds its own
+	// repositories to each order's transaction and does not use this one.
+	orders := repository.NewOrderRepository(db)
 	tx := repository.NewTxManager(db)
 
 	issuer := pkgjwt.NewIssuer(
@@ -123,6 +126,7 @@ func NewContainer(ctx context.Context) (*Container, error) {
 	)
 	productService := service.NewProductService(products)
 	orderSyncService := service.NewOrderSyncService(tx, service.DefaultOrderTxRepos)
+	orderService := service.NewOrderService(orders)
 
 	closeDB = false
 	return &Container{
@@ -140,7 +144,7 @@ func NewContainer(ctx context.Context) (*Container, error) {
 			User:    handler.NewUserHandler(userService),
 			Role:    handler.NewRoleHandler(roleService),
 			Product: handler.NewProductHandler(productService),
-			Order:   handler.NewOrderHandler(orderSyncService),
+			Order:   handler.NewOrderHandler(orderSyncService, orderService),
 		},
 		Health: handler.NewHealthHandler(sqlDB, redisClient),
 	}, nil

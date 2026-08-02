@@ -27,8 +27,8 @@ type Order struct {
 	BusinessID        uuid.UUID  `gorm:"column:business_id;not null"`
 	BranchID          *uuid.UUID `gorm:"column:branch_id"`
 	ClientGeneratedID string     `gorm:"column:client_generated_id;not null"`
-	ReceiptNo *string `gorm:"column:receipt_no"`
-	PaymentMethod string `gorm:"column:payment_method;not null"`
+	ReceiptNo         *string    `gorm:"column:receipt_no"`
+	PaymentMethod     string     `gorm:"column:payment_method;not null"`
 
 	SubtotalCents int64 `gorm:"column:subtotal_cents;not null"`
 	DiscountCents int64 `gorm:"column:discount_cents;not null"`
@@ -85,12 +85,12 @@ type OrderPayment struct {
 	IDMixin
 	CreatedOnly
 
-	OrderID     uuid.UUID `gorm:"column:order_id;not null"`
-	Method      string    `gorm:"column:method;not null"`
-	AmountCents int64     `gorm:"column:amount_cents;not null"`
-	TenderedCents *int64  `gorm:"column:tendered_cents"`
-	ChangeCents   *int64  `gorm:"column:change_cents"`
-	Reference     *string `gorm:"column:reference"`
+	OrderID       uuid.UUID `gorm:"column:order_id;not null"`
+	Method        string    `gorm:"column:method;not null"`
+	AmountCents   int64     `gorm:"column:amount_cents;not null"`
+	TenderedCents *int64    `gorm:"column:tendered_cents"`
+	ChangeCents   *int64    `gorm:"column:change_cents"`
+	Reference     *string   `gorm:"column:reference"`
 }
 
 func (OrderPayment) TableName() string { return "order_payments" }

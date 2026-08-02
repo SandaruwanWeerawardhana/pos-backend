@@ -44,12 +44,27 @@ func TestComputeTotals(t *testing.T) {
 				// A weighted item priced per kg: 899 cents/kg * 0.457 kg.
 				{UnitPriceCents: 899, Quantity: 0.457, TaxRate: 0},
 			},
-			// The client computes 410.843 and leaves it fractional; dto.Cents
-			// rounds it to 411 on the way in, so the recompute must round the
-			// same way or every weighted sale would be flagged as mismatched.
+			// 410.843 raw. The client rounds this to 411 before persisting, and
+			// dto.Cents rounds an older client's fractional 410.843 to the same
+			// figure, so the recompute must round the same way or every weighted
+			// sale would be flagged as mismatched.
 			wantSubtotal: 411,
 			wantTax:      0,
 			wantTotal:    411,
+		},
+		{
+			name: "discounted weighted line clamps against the rounded subtotal",
+			items: []SyncOrderItem{
+				{UnitPriceCents: 899, Quantity: 0.457, TaxRate: 0.08},
+			},
+			// Both sides round the raw subtotal to 411 first and take the
+			// discount ratio against that, rather than against 410.843. rawTax
+			// is round(410.843*0.08) = 33, ratio is 200/411, so tax is
+			// round(33 * (1 - 200/411)) = 17.
+			discountCents: 200,
+			wantSubtotal:  211,
+			wantTax:       17,
+			wantTotal:     228,
 		},
 		{
 			name: "order discount scales tax proportionally",

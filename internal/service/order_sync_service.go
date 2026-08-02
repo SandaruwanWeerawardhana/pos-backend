@@ -271,12 +271,17 @@ func (s *orderSyncService) syncOne(
 // step, because any deviation would flag honest sales as mismatched and make the
 // flag worthless. In particular, matching the client means:
 //
-//   - the raw subtotal accumulates unit_price * quantity as a float and is not
-//     rounded per line, while tax IS rounded per line;
+//   - the raw subtotal accumulates unit_price * quantity as a float and is
+//     rounded once, after the whole cart, not per line; tax IS rounded per line;
 //   - line_discount_cents does not participate — the client tracks it per line
 //     but does not subtract it in the total, so neither does this;
-//   - the discount is clamped to the raw subtotal, and tax is scaled by the
+//   - the discount is clamped to that rounded subtotal, and tax is scaled by the
 //     resulting ratio rather than recomputed against the discounted base.
+//
+// The client rounded the subtotal only on the way out of the transport before,
+// and clamped the discount against the unrounded figure, so a discounted
+// weighted sale could produce a tax ratio a cent away from this one. Both sides
+// now round at the same point.
 //
 // Float arithmetic is deliberate here for the same reason: integer maths would
 // round differently from the client and produce spurious mismatches.

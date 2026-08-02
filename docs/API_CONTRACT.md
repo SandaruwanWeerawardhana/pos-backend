@@ -1,6 +1,6 @@
 # API contract — Phase 1
 
-The eleven endpoints the frontend already calls. The client is written and
+The thirteen endpoints the frontend already calls. The client is written and
 committed (`pos-frontend/src/lib/services/`), so **the client is the
 specification** — the shapes below are what it sends and reads, not proposals.
 
@@ -230,18 +230,73 @@ SELECT client_generated_id, total_cents, server_total_cents
 FROM orders WHERE business_id = $1 AND totals_mismatch;
 ```
 
-### ⚠️ Client bug this works around
+### ⚠️ Fractional cents on the wire
 
 `computeCartTotal` multiplies `unit_price_cents` by a fractional quantity for
-weighted items and does **not** round, so a 0.457 kg sale at 899 c/kg persists
-and transmits `total_cents: 410.843`. `encoding/json` refuses to decode that
-into an `int64` — and refuses even `410.0` — which would have failed the entire
-batch.
+weighted items. It used **not** to round, so a 0.457 kg sale at 899 c/kg
+persisted and transmitted `total_cents: 410.843`. `encoding/json` refuses to
+decode that into an `int64` — and refuses even `410.0` — which would have failed
+the entire batch.
 
-`dto.Cents` therefore accepts a fractional amount and rounds it. **The client
-should be fixed to round before persisting**; until then this keeps weighted-item
-sales syncable. `computeTotals` rounds the same way so those sales are not all
-flagged as mismatched.
+`dto.Cents` therefore accepts a fractional amount and rounds it. The client now
+rounds the raw subtotal before the discount, matching `computeTotals` exactly, so
+new orders arrive as integers — but a till still holds unsynced orders written by
+the older code, and this keeps them syncable.
+
+## `GET /orders` → 200 *(auth)*
+
+One page of stored sales, newest first. Paginated, unlike `GET /products`: the
+catalogue is bounded and cached whole for offline selling, but sales history only
+grows.
+
+```jsonc
+// GET /orders?page=1&per_page=25&search=R2026&payment_method=cash&from=…&to=…&sort=sold_at&order=desc
+{ "orders": [ { "id": "uuid",
+                "client_generated_id": "uuid",     // the key the client joins on
+                "receipt_no": "R20260730-0001",
+                "payment_method": "cash",
+                "subtotal_cents": 1150, "discount_cents": 0,
+                "tax_total_cents": 100, "total_cents": 1250,
+                "refunded": false,
+                "totals_mismatch": false,           // server recompute disagreed
+                "cashier_id": "uuid", "branch_id": "uuid",
+                "sold_at": 1750000000000,           // business date, epoch ms
+                "synced_at": 1750000060000,
+                "items": [ { "product_id": "uuid|null", "name": "Bananas",
+                             "quantity": 1.2, "unit_price_cents": 199,
+                             "tax_rate": 0, "is_weighted": true,
+                             "line_discount_cents": 0 } ],
+                "payments": [ { "method": "cash", "amount_cents": 1250 } ] } ],
+  "meta": { "page": 1, "per_page": 25, "total": 340,
+            "total_pages": 14, "has_next": true, "has_prev": false } }
+```
+
+| Param | Detail |
+|---|---|
+| `page`, `per_page` | Clamped: `per_page` max 100, default 20. |
+| `sort` | One of `sold_at` (default), `total_cents`, `synced_at`, `created_at`. **Anything else is a 422** — the value is interpolated into `ORDER BY`, which GORM does not escape. |
+| `order` | `asc` / `desc`; anything else falls back to `desc`. |
+| `search` | Contains-match on `receipt_no`, `client_generated_id`, **and item names** (via `EXISTS`, so the count stays per-order). |
+| `payment_method` | `cash` / `card` / `qr` / `other`; anything else is a 422. |
+| `from`, `to` | Epoch ms bounds on `sold_at`, the business date. `to` earlier than `from` is a 422 rather than a silently empty page. |
+
+`items` and `payments` are always arrays, never `null` — the client calls
+`.length` and `.map()` on both without a guard.
+
+**This is only what synced.** A till sells offline, so its own unpushed sales are
+absent here. The sales screen overlays them from IndexedDB (`useSalesFeed`)
+rather than treating this list as complete, keyed on `client_generated_id` so a
+sale that has just synced does not render twice.
+
+## `GET /orders/{clientGeneratedID}` → 200 *(auth)*
+
+One stored sale, same shape as a list entry. Keyed on the **till's** id, not the
+server's: that is what the client holds and what its sales list links to.
+
+`404` for an unknown id, and for another business's id alike — distinguishing
+them would confirm a receipt exists somewhere in the system to whoever asks. A
+sale the till has not pushed yet has no server row at all, so the client reads
+its local copy first and only falls back here.
 
 ## Limits
 
