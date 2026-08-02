@@ -5,12 +5,14 @@ import (
 	"github.com/SandaruwanWeerawardhana/pos-backend/internal/entity"
 )
 
-// ToOrderResponse maps a stored sale onto the wire shape the sales screen reads.
-//
-// Items and payments are always non-nil slices. encoding/json renders a nil
-// slice as null, and the client calls .length and .map() on both directly — an
-// order that somehow lost its lines should render as an empty receipt, not throw
-// on the till.
+/*
+ToOrderResponse maps a stored sale onto the wire shape the sales screen reads.
+
+Items and payments are always non-nil slices. encoding/json renders a nil
+slice as null, and the client calls .length and .map() on both directly — an
+order that somehow lost its lines should render as an empty receipt, not throw
+on the till.
+*/
 func ToOrderResponse(o entity.Order) dto.OrderResponse {
 	res := dto.OrderResponse{
 		ID:                o.ID.String(),
@@ -64,8 +66,10 @@ func ToOrderResponse(o entity.Order) dto.OrderResponse {
 	return res
 }
 
-// ToOrderResponseList always returns a non-nil slice, for the same reason
-// ToProductResponseList does.
+/*
+ToOrderResponseList always returns a non-nil slice, for the same reason
+ToProductResponseList does.
+*/
 func ToOrderResponseList(orders []entity.Order) []dto.OrderResponse {
 	out := make([]dto.OrderResponse, 0, len(orders))
 	for _, o := range orders {

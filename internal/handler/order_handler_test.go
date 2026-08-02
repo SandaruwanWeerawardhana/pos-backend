@@ -23,8 +23,10 @@ import (
 	"github.com/SandaruwanWeerawardhana/pos-backend/pkg/pagination"
 )
 
-// captureSyncService records what the handler hands the service and replies
-// with one outcome per input, which is the service's own contract.
+/*
+captureSyncService records what the handler hands the service and replies
+with one outcome per input, which is the service's own contract.
+*/
 type captureSyncService struct {
 	got []service.SyncOrderInput
 }
@@ -48,8 +50,10 @@ func (s *captureSyncService) Sync(
 	return outcomes
 }
 
-// stubOrderService satisfies the read half of the handler's dependencies. These
-// tests exercise the write path only, so every method fails loudly if reached.
+/*
+stubOrderService satisfies the read half of the handler's dependencies. These
+tests exercise the write path only, so every method fails loudly if reached.
+*/
 type stubOrderService struct{ t *testing.T }
 
 func (s stubOrderService) List(context.Context, uuid.UUID, service.OrderListQuery) (service.OrderPage, error) {
@@ -62,8 +66,10 @@ func (s stubOrderService) GetByClientID(context.Context, uuid.UUID, string) (*en
 	return nil, nil
 }
 
-// captureOrderService records the query the handler derived from the URL, which
-// is where clamping and whitelist validation actually happen.
+/*
+captureOrderService records the query the handler derived from the URL, which
+is where clamping and whitelist validation actually happen.
+*/
 type captureOrderService struct {
 	got  service.OrderListQuery
 	page service.OrderPage
@@ -83,8 +89,10 @@ func (s *captureOrderService) GetByClientID(
 	return nil, nil
 }
 
-// newSyncApp wires the handler behind a stand-in for the auth middleware, which
-// is the only thing that puts the token's user/business ids on the context.
+/*
+newSyncApp wires the handler behind a stand-in for the auth middleware, which
+is the only thing that puts the token's user/business ids on the context.
+*/
 func newSyncApp(t *testing.T, sync service.OrderSyncService, userID, businessID uuid.UUID) *fiber.App {
 	t.Helper()
 
@@ -121,9 +129,11 @@ const oneOrderTemplate = `{"orders":[{
 	"items":[{"name":"Bananas","quantity":2,"unit_price_cents":199,"tax_rate":0}]
 }]}`
 
-// A sale that names no cashier is still attributable: the request carried a
-// token, and that user rang it up. Leaving CashierID nil dropped the order out
-// of every per-cashier report.
+/*
+A sale that names no cashier is still attributable: the request carried a
+token, and that user rang it up. Leaving CashierID nil dropped the order out
+of every per-cashier report.
+*/
 func TestSyncFallsBackToTheAuthenticatedCashier(t *testing.T) {
 	userID := uuid.New()
 	sync := &captureSyncService{}
@@ -145,9 +155,11 @@ func TestSyncFallsBackToTheAuthenticatedCashier(t *testing.T) {
 	}
 }
 
-// An explicit cashier_id wins. Phase 2 staff/PIN auth rings sales up under the
-// staff member rather than the device's token holder, so the handler must not
-// overwrite what the client sent.
+/*
+An explicit cashier_id wins. Phase 2 staff/PIN auth rings sales up under the
+staff member rather than the device's token holder, so the handler must not
+overwrite what the client sent.
+*/
 func TestSyncKeepsAnExplicitCashierID(t *testing.T) {
 	tokenUserID := uuid.New()
 	staffID := uuid.New()
@@ -167,8 +179,10 @@ func TestSyncKeepsAnExplicitCashierID(t *testing.T) {
 	}
 }
 
-// One result per submitted order, always — a client that does not find its
-// order in results leaves it "syncing" locally with nothing to re-queue it.
+/*
+One result per submitted order, always — a client that does not find its
+order in results leaves it "syncing" locally with nothing to re-queue it.
+*/
 func TestSyncReturnsOneResultPerOrder(t *testing.T) {
 	sync := &captureSyncService{}
 	app := newSyncApp(t, sync, uuid.New(), uuid.New())
@@ -190,14 +204,20 @@ func TestSyncReturnsOneResultPerOrder(t *testing.T) {
 	}
 }
 
-// ── GET /orders ────────────────────────────────────────────────────────────
+/*
+	── GET /orders ────────────────────────────────────────────────────────────
+*/
 
-// newListApp mirrors newSyncApp for the read path, including the error handler:
-// a rejected sort or an inverted date range has to come back as a status code,
-// not a panic.
+/*
+newListApp mirrors newSyncApp for the read path, including the error handler:
+a rejected sort or an inverted date range has to come back as a status code,
+not a panic.
+*/
 func newListApp(orders service.OrderService, businessID uuid.UUID) *fiber.App {
-	// A real logger, not nil: ErrorHandler logs every rejection, and these tests
-	// exist precisely to drive it down the rejection paths.
+	/*
+		A real logger, not nil: ErrorHandler logs every rejection, and these tests
+		exist precisely to drive it down the rejection paths.
+	*/
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	app := fiber.New(fiber.Config{ErrorHandler: middleware.ErrorHandler(logger)})
 	h := NewOrderHandler(nil, orders)
@@ -218,8 +238,10 @@ func getOrders(t *testing.T, app *fiber.App, query string) *http.Response {
 	return res
 }
 
-// No query string must still produce a bounded, deterministically ordered page —
-// an unpaginated default would grow into a full table scan as sales accumulate.
+/*
+No query string must still produce a bounded, deterministically ordered page —
+an unpaginated default would grow into a full table scan as sales accumulate.
+*/
 func TestListAppliesPaginationDefaults(t *testing.T) {
 	orders := &captureOrderService{}
 	app := newListApp(orders, uuid.New())
@@ -240,8 +262,10 @@ func TestListAppliesPaginationDefaults(t *testing.T) {
 	}
 }
 
-// per_page is clamped rather than honoured: an unbounded page is a denial of
-// service against a table that only grows.
+/*
+per_page is clamped rather than honoured: an unbounded page is a denial of
+service against a table that only grows.
+*/
 func TestListClampsPerPage(t *testing.T) {
 	orders := &captureOrderService{}
 	app := newListApp(orders, uuid.New())
@@ -256,8 +280,10 @@ func TestListClampsPerPage(t *testing.T) {
 	}
 }
 
-// Sort is interpolated into ORDER BY, which GORM does not escape. An unlisted
-// value must be rejected outright, never passed through or silently ignored.
+/*
+Sort is interpolated into ORDER BY, which GORM does not escape. An unlisted
+value must be rejected outright, never passed through or silently ignored.
+*/
 func TestListRejectsAnUnlistedSortField(t *testing.T) {
 	orders := &captureOrderService{}
 	app := newListApp(orders, uuid.New())
@@ -294,8 +320,10 @@ func TestListRejectsAnUnknownPaymentMethod(t *testing.T) {
 	}
 }
 
-// Meta describes the whole filtered result, not the page — the client renders
-// "1–20 of 45" and enables its next-page control from it.
+/*
+Meta describes the whole filtered result, not the page — the client renders
+"1–20 of 45" and enables its next-page control from it.
+*/
 func TestListReturnsOrdersWithPaginationMeta(t *testing.T) {
 	soldAt := time.UnixMilli(1735689600000)
 	orders := &captureOrderService{
@@ -337,8 +365,10 @@ func TestListReturnsOrdersWithPaginationMeta(t *testing.T) {
 	}
 }
 
-// An order with no lines must serialise as [], not null: the client calls
-// .length and .map() on both arrays without a guard.
+/*
+An order with no lines must serialise as [], not null: the client calls
+.length and .map() on both arrays without a guard.
+*/
 func TestListSerialisesEmptyItemsAsAnArray(t *testing.T) {
 	orders := &captureOrderService{
 		page: service.OrderPage{Total: 1, Orders: []entity.Order{{ClientGeneratedID: "cgid-1"}}},
