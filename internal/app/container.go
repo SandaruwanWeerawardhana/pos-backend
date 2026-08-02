@@ -89,8 +89,6 @@ func NewContainer(ctx context.Context) (*Container, error) {
 	passwordResets := repository.NewPasswordResetRepository(db)
 	auditLogs := repository.NewAuditLogRepository(db)
 	products := repository.NewProductRepository(db)
-	orders := repository.NewOrderRepository(db)
-	stock := repository.NewStockRepository(db)
 	tx := repository.NewTxManager(db)
 
 	issuer := pkgjwt.NewIssuer(
@@ -124,9 +122,7 @@ func NewContainer(ctx context.Context) (*Container, error) {
 		users, passwordResets, tokenService, cfg.Bcrypt.Cost,
 	)
 	productService := service.NewProductService(products)
-	orderSyncService := service.NewOrderSyncService(
-		orders, stock, tx, service.DefaultOrderTxRepos,
-	)
+	orderSyncService := service.NewOrderSyncService(tx, service.DefaultOrderTxRepos)
 
 	closeDB = false
 	return &Container{

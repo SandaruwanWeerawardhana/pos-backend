@@ -72,11 +72,11 @@ type OrderSyncService interface {
 }
 
 type orderSyncService struct {
-	orders repository.OrderRepository
-	stock  repository.StockRepository
-	tx     TxRunner
-	// newTxRepos rebinds the repositories to the transaction's *gorm.DB, the
-	// same pattern AuthService.Register uses.
+	tx TxRunner
+	// newOrderRepos rebinds the repositories to the transaction's *gorm.DB, the
+	// same pattern AuthService.Register uses. Every write this service makes
+	// happens inside that transaction, so it holds no non-transactional
+	// repository of its own.
 	newOrderRepos func(tx *gorm.DB) OrderTxRepos
 }
 
@@ -96,12 +96,10 @@ func DefaultOrderTxRepos(tx *gorm.DB) OrderTxRepos {
 }
 
 func NewOrderSyncService(
-	orders repository.OrderRepository,
-	stock repository.StockRepository,
 	tx TxRunner,
 	newOrderRepos func(tx *gorm.DB) OrderTxRepos,
 ) OrderSyncService {
-	return &orderSyncService{orders: orders, stock: stock, tx: tx, newOrderRepos: newOrderRepos}
+	return &orderSyncService{tx: tx, newOrderRepos: newOrderRepos}
 }
 
 // Sync stores a batch of sales and returns one outcome per order, in the order
