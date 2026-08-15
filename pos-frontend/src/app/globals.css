@@ -1,0 +1,291 @@
+@import "tailwindcss";
+
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --font-display: var(--font-geist), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Velocity Retail theme — src: D:\Download\DESIGN llight 1.md */
+  --color-surface: #f8f9ff;
+  --color-surface-dim: #cbdbf5;
+  --color-surface-bright: #f8f9ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eff4ff;
+  --color-surface-container: #e5eeff;
+  --color-surface-container-high: #dce9ff;
+  --color-surface-container-highest: #d3e4fe;
+  --color-on-surface: #0b1c30;
+  --color-on-surface-variant: #444651;
+  --color-inverse-surface: #213145;
+  --color-inverse-on-surface: #eaf1ff;
+  --color-outline: #757682;
+  --color-outline-variant: #c5c5d3;
+  --color-surface-tint: #4059aa;
+  --color-primary: #00236f;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1e3a8a;
+  --color-on-primary-container: #90a8ff;
+  --color-inverse-primary: #b6c4ff;
+  --color-secondary: #0058be;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #2170e4;
+  --color-on-secondary-container: #fefcff;
+  --color-tertiary: #003211;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #004b1e;
+  --color-on-tertiary-container: #22c55e;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed: #dce1ff;
+  --color-primary-fixed-dim: #b6c4ff;
+  --color-on-primary-fixed: #00164e;
+  --color-on-primary-fixed-variant: #264191;
+  --color-secondary-fixed: #d8e2ff;
+  --color-secondary-fixed-dim: #adc6ff;
+  --color-on-secondary-fixed: #001a42;
+  --color-on-secondary-fixed-variant: #004395;
+  --color-tertiary-fixed: #6bff8f;
+  --color-tertiary-fixed-dim: #4ae176;
+  --color-on-tertiary-fixed: #002109;
+  --color-on-tertiary-fixed-variant: #005321;
+  --color-background: #f8f9ff;
+  --color-on-background: #0b1c30;
+  --color-surface-variant: #d3e4fe;
+
+  /* Midnight Navy — replaces Tailwind's neutral zinc scale with a
+     brand-tinted dark ramp (same navy hue as --color-primary) so every
+     existing `dark:*-zinc-*` utility across the app inherits a cohesive
+     dark theme instead of generic gray, with no per-component edits. */
+  --color-zinc-50: #f4f6fb;
+  --color-zinc-100: #e7ebf5;
+  --color-zinc-200: #cbd3e6;
+  --color-zinc-300: #aab4cf;
+  --color-zinc-400: #8791ac;
+  --color-zinc-500: #6b7390;
+  --color-zinc-600: #545b76;
+  --color-zinc-700: #2c3350;
+  --color-zinc-800: #1c2138;
+  --color-zinc-900: #12152a;
+  --color-zinc-950: #0a0c1a;
+
+  /* Layered, brand-tinted (not pure black) elevation. Premium reads as soft
+     and directional; a single flat shadow reads as a default. */
+  --shadow-elevated: 0 1px 2px rgba(11, 28, 55, 0.06), 0 12px 28px -8px rgba(11, 28, 55, 0.16);
+  --shadow-card: 0 1px 2px rgba(11, 28, 55, 0.04), 0 4px 12px -4px rgba(11, 28, 55, 0.08);
+  --shadow-popover: 0 4px 8px rgba(11, 28, 55, 0.08), 0 24px 48px -12px rgba(11, 28, 55, 0.28);
+
+  /* Motion tokens. Longer than a stock UI kit so transitions read as deliberate
+     rather than snapped-to, but capped: the cashier is still faster than any
+     animation worth watching, and a till runs on cheap hardware. Press/hover
+     feedback stays under ~250ms so the screen never feels behind the finger. */
+  --duration-instant: 120ms;
+  --duration-fast: 220ms;
+  --duration-base: 340ms;
+  --duration-slow: 520ms;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
+}
+
+@utility text-display-lg {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 56px;
+  letter-spacing: -0.03em;
+}
+
+@utility text-headline-lg {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 40px;
+  letter-spacing: -0.02em;
+}
+
+@utility text-headline-md {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+}
+
+@utility text-body-lg {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+@utility text-body-md {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+}
+
+@utility text-body-sm {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+@utility text-label-md {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+@utility text-mono-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-fade-in-up {
+  animation: fade-in-up var(--duration-slow) var(--ease-decelerate) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-up-sheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@utility animate-fade-in {
+  animation: fade-in var(--duration-base) var(--ease-standard) both;
+}
+
+@utility animate-scale-in {
+  animation: scale-in var(--duration-base) var(--ease-decelerate) both;
+}
+
+@utility animate-slide-in-right {
+  animation: slide-in-right var(--duration-base) var(--ease-decelerate) both;
+}
+
+@utility animate-slide-in-left {
+  animation: slide-in-left var(--duration-base) var(--ease-decelerate) both;
+}
+
+@utility animate-slide-up-sheet {
+  animation: slide-up-sheet var(--duration-slow) var(--ease-decelerate) both;
+}
+
+@utility animate-pulse-ring {
+  animation: pulse-ring 1.8s var(--ease-standard) infinite;
+}
+
+/* Loading placeholder that reads as "data is coming" rather than the flatter
+   opacity pulse. Own background so it overrides any bg-* utility on the node. */
+@utility animate-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, currentColor 8%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* Vestibular-safety switch. Anything that moves collapses to an instant state
+   change; nothing is hidden, it just stops travelling. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

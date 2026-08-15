@@ -1,0 +1,80 @@
+// Typed route constants — every Link/redirect added under src/app/(app)
+// should use these instead of raw path strings.
+
+export const ROUTES = {
+  home: "/",
+  auth: {
+    login: "/auth/login",
+    register: "/auth/register",
+    forgotPassword: "/auth/forgot-password",
+    resetPassword: "/auth/reset-password",
+  },
+  admin: "/admin",
+  profile: "/profile",
+  pos: {
+    root: "/pos",
+    hold: "/pos/hold",
+    close: "/pos/close",
+  },
+  dashboard: "/dashboard",
+  products: "/products",
+  productsNew: "/products/new",
+  productDetail: (id: string) => `/products/${id}`,
+  productEdit: (id: string) => `/products/${id}/edit`,
+  catalogue: {
+    printLabels: "/products/print-labels",
+    categories: "/products/categories",
+    brands: "/products/brands",
+    units: "/products/units",
+    batches: "/products/batches",
+  },
+  inventory: {
+    root: "/store",
+    detail: (id: string) => `/store/${id}`,
+    alerts: "/store/alerts",
+    movements: "/store/movements",
+    transfers: "/store/transfers",
+  },
+  purchases: {
+    root: "/purchases",
+    new: "/purchases/new",
+    detail: (id: string) => `/purchases/${id}`,
+    returns: "/purchases/returns",
+  },
+  sales: {
+    root: "/sales",
+    detail: (id: string) => `/sales/${id}`,
+  },
+  store: {
+    root: "/store",
+  },
+  suppliers: "/people/suppliers",
+  suppliersNew: "/people/suppliers/new",
+  suppliersEdit: (id: string) => `/people/suppliers/${id}/edit`,
+  suppliersImport: "/people/suppliers/import",
+  people: {
+    root: "/people/customer",
+    new: "/people/customer/new",
+    edit: (id: string) => `/people/customer/${id}/edit`,
+    import: "/people/customer/import",
+    withoutLogin: "/people/customer/without-login",
+    withLogin: "/people/customer/with-login",
+    clientPortal: "/people/customer/client-portal",
+  },
+  reports: "/reports",
+  reports3d: "/reports/3Dreport",
+  reportsPaymentPurchases: "/reports/payment/purchase",
+  reportsPaymentSales: "/reports/payment/sale",
+  discounts: "/discounts",
+  users: {
+    root: "/users",
+    new: "/users/new",
+    edit: (id: string) => `/users/${id}`,
+    permissions: "/users/permissions",
+    permissionsNew: "/users/permissions/new",
+  },
+  settings: {
+    root: "/settings",
+    hardware: "/settings/hardware",
+  },
+} as const;
